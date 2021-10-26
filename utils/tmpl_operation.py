@@ -1,0 +1,112 @@
+from .utils import run_shell_cmd, read_json
+from .gcs_operation import list_file_gcs, read_json_gcs, move_file_gcs
+import os
+from google.cloud import datacatalog
+
+def create_template(project_id, template_id, location, display_name, fields):
+    # Create a Tag Template.
+    datacatalog_client = datacatalog.DataCatalogClient()
+    tag_template = datacatalog.TagTemplate()
+
+    tag_template.display_name = display_name
+
+    for field in fields:
+        tag_template.fields[field["id"]] = datacatalog.TagTemplateField()
+        tag_template.fields[field["id"]].display_name = field["display_name"]
+        tag_template.fields[field["id"]].is_required = field["required"]
+        if "description" in field:
+            tag_template.fields[field["id"]].description = field["description"]
+
+        if field["type"] == "string":
+            tag_template.fields[field["id"]].type_.primitive_type = datacatalog.FieldType.PrimitiveType.STRING
+        if field["type"] == "double":
+            tag_template.fields[field["id"]].type_.primitive_type = datacatalog.FieldType.PrimitiveType.DOUBLE
+        if field["type"] == "bool":
+            tag_template.fields[field["id"]].type_.primitive_type = datacatalog.FieldType.PrimitiveType.BOOL
+        if field["type"] == "enum":
+            for display_name in field["allowed_values"]:
+                enum_value = datacatalog.FieldType.EnumType.EnumValue(display_name=display_name)
+                tag_template.fields[field["id"]].type_.enum_type.allowed_values.append(enum_value)
+
+    expected_template_name = datacatalog.DataCatalogClient.tag_template_path(
+        project_id, location, template_id
+    )
+    # Create the Tag Template.
+    try:
+        tag_template = datacatalog_client.create_tag_template(
+            parent=f"projects/{project_id}/locations/{location}",
+            tag_template_id=template_id,
+            tag_template=tag_template,
+        )
+        print(f"Created template: {tag_template.name}")
+    except OSError as e:
+        print(f"Cannot create template: {expected_template_name}")
+        print(f"{e}")
+    return True
+'''
+def create_template(project_id, template_id, location, display_name, fields):
+    # Build gcloud cmd to create template
+    gdc_create_template = (f"gcloud data-catalog tag-templates create {template_id} "
+                            f"--location={location} "
+                            f"--display-name='{display_name}' "
+                            f"--project={project_id} "
+                        )
+
+    # Build cmd for fields need to be added in template
+    field_to_add = []
+    for field in fields:
+        allowed_values = ""
+        if field["type"] == "enum":
+            try:
+                allowed_values = "(" + "|".join(field["allowed_values"]) + ")"
+            except:
+                raise ValueError("At least one valid field is required for enum type")
+
+        field_to_add.append(f"--field=id={field['id']}"
+                            f",display-name='{field['display_name']}'"
+                            f",type='{field['type']}{allowed_values}'"
+                            f"{',required=TRUE' if field['required'] else ''}"
+                            )
+
+    field_to_add = " ".join(field_to_add)
+    gdc_create_template = gdc_create_template + field_to_add
+
+    result = run_shell_cmd(gdc_create_template)
+    print(result.stderr)
+    return result.returncode
+'''
+def delete_template(project_id, template_id, location):
+    gdc_delete_template = (f"gcloud data-catalog tag-templates delete {template_id} --force --quiet "
+                            f"--location={location} "
+                            f"--project={project_id}")
+    result = run_shell_cmd(gdc_delete_template)
+    return result.returncode
+
+def read_and_create_tag_template():
+    job_config = read_json("config/config.json")
+
+    project_id = job_config["project_id"]
+    bucket = job_config["bucket"]
+    landing = job_config["landing_folder"]
+    processed = job_config["processed_folder"]  
+
+    if job_config["run_local"]:
+        for tmpl_file in os.listdir("tag_template/landing/"):
+            if tmpl_file.startswith("template") and tmpl_file.endswith(".json"):
+                tmpl_cfg = read_json(f"tag_template/landing/{tmpl_file}")
+                # delete template when existed
+                delete_template(project_id, tmpl_cfg["template_id"], tmpl_cfg["location"])
+                result = create_template(project_id, tmpl_cfg["template_id"], tmpl_cfg["location"], tmpl_cfg["display_name"], tmpl_cfg["fields"])
+                if result:
+                    os.rename(f"tag_template/landing/{tmpl_file}", f"tag_template/processed/{tmpl_file}.done")
+    else:
+        gcs_list = list_file_gcs(project_id, bucket, f"{landing}/template")
+        for tmpl_file in gcs_list:
+            if tmpl_file.endswith(".json"):
+                tmpl_cfg = read_json_gcs(project_id, bucket, tmpl_file)
+                # delete template when existed
+                delete_template(project_id, tmpl_cfg["template_id"], tmpl_cfg["location"])
+                result = create_template(project_id, tmpl_cfg["template_id"], tmpl_cfg["location"], tmpl_cfg["display_name"], tmpl_cfg["fields"])
+                if result:
+                    move_file_gcs(project_id, bucket, tmpl_file, bucket, f"{processed}/{tmpl_file.split('/')[-1]}.done")
+    return True

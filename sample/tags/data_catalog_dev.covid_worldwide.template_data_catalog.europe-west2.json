@@ -1,0 +1,23 @@
+{
+    "project_name": "acn-uki-ds-data-ai-project",
+    "dataset_name": "data_catalog_dev",
+    "table_name": "covid_worldwide",
+    "table_description": "covid 19 worldwide",
+    "source_system": "public_data",
+    "business_glossary": "",
+    "transformation_logic": "",
+    "subject_domain": "",
+    "layer": "",
+    "granularity": "",
+    "contains_pii": false,
+    "contains_sensitive": false,
+    "classification": "",
+    "hold_profiled_data": false,
+    "data_sign_off": false,
+    "retention": "",
+    "crop_number": 0,
+    "frequency": 0,
+    "data_owner": "",
+    "data_stewart": "",
+    "consumer_group": ""
+}
