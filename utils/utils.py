@@ -2,8 +2,6 @@ import subprocess
 import json
 import csv, re
 
-from proto import DOUBLE
-
 def run_shell_cmd(cmd):
     return subprocess.run(cmd, shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
