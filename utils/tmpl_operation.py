@@ -43,38 +43,7 @@ def create_template(project_id, template_id, location, display_name, fields):
         print(f"Cannot create template: {expected_template_name}")
         print(f"{e}")
     return True
-'''
-def create_template(project_id, template_id, location, display_name, fields):
-    # Build gcloud cmd to create template
-    gdc_create_template = (f"gcloud data-catalog tag-templates create {template_id} "
-                            f"--location={location} "
-                            f"--display-name='{display_name}' "
-                            f"--project={project_id} "
-                        )
 
-    # Build cmd for fields need to be added in template
-    field_to_add = []
-    for field in fields:
-        allowed_values = ""
-        if field["type"] == "enum":
-            try:
-                allowed_values = "(" + "|".join(field["allowed_values"]) + ")"
-            except:
-                raise ValueError("At least one valid field is required for enum type")
-
-        field_to_add.append(f"--field=id={field['id']}"
-                            f",display-name='{field['display_name']}'"
-                            f",type='{field['type']}{allowed_values}'"
-                            f"{',required=TRUE' if field['required'] else ''}"
-                            )
-
-    field_to_add = " ".join(field_to_add)
-    gdc_create_template = gdc_create_template + field_to_add
-
-    result = run_shell_cmd(gdc_create_template)
-    print(result.stderr)
-    return result.returncode
-'''
 def delete_template(project_id, template_id, location):
     gdc_delete_template = (f"gcloud data-catalog tag-templates delete {template_id} --force --quiet "
                             f"--location={location} "

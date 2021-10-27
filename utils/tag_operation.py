@@ -1,4 +1,4 @@
-from .utils import run_shell_cmd, read_json
+from .utils import run_shell_cmd, read_json, read_tag_csv, prepare_dict, dict_to_json
 from .gcs_operation import list_file_gcs, download_file_gcs, move_file_gcs
 import os
 
@@ -48,27 +48,37 @@ def read_and_attach_tag():
 
     if job_config["run_local"]:
         for tag_file in os.listdir("tags/landing/"):
-            if tag_file.endswith(".json"):
-                tag_info = tag_file.split(".")
-                dataset = tag_info[0]
-                table = tag_info[1]
-                template = tag_info[2]
-                tmplt_loc = tag_info[3]
-                result = attach_table_tag(project_id, dataset, table, template, tmplt_loc, f"tags/landing/{tag_file}")
-                if result == 0:
-                    os.rename(f"tags/landing/{tag_file}", f"tags/processed/{tag_file}.done")
+            if tag_file.endswith(".csv"):
+                tag_info_list = read_tag_csv(f"tags/landing/{tag_file}")
+                for tag_info in tag_info_list:
+                    dataset = tag_info['dataset_name']
+                    table = tag_info['table_name']
+                    template = tag_info['template_id']
+                    tmplt_loc = tag_info['template_location']
+                    tag_json = prepare_dict(tag_info['tag_json'])
+                    dict_to_json(tag_json, 'temp_tag_info.json')
+                    result = attach_table_tag(project_id, dataset, table, template, tmplt_loc, 'temp_tag_info.json')
+                    if result == 0:
+                        os.remove('temp_tag_info.json')
+                os.rename(f"tags/landing/{tag_file}", f"tags/processed/{tag_file}.done")
+
     else:
         gcs_list = list_file_gcs(project_id, bucket, f"{landing}/")
         for tag_file in gcs_list:
-            if tag_file.endswith(".json"):
-                tag_info = tag_file.split(".")
-                dataset = tag_info[0].split("/")[-1]
-                table = tag_info[1]
-                template = tag_info[2]
-                tmplt_loc = tag_info[3]
+            if tag_file.endswith(".csv"):
                 download_file_gcs(project_id, bucket, tag_file, f"./{tag_file.split('/')[-1]}")
-                result = attach_table_tag(project_id, dataset, table, template, tmplt_loc, f"./{tag_file.split('/')[-1]}")
-                if result == 0:
-                    move_file_gcs(project_id, bucket, tag_file, bucket, f"{processed}/{tag_file.split('/')[-1]}.done")
+                tag_info_list = read_tag_csv(f"./{tag_file.split('/')[-1]}")
+                for tag_info in tag_info_list:
+                    dataset = tag_info['dataset_name']
+                    table = tag_info['table_name']
+                    template = tag_info['template_id']
+                    tmplt_loc = tag_info['template_location']
+                    tag_json = prepare_dict(tag_info['tag_json'])
+                    dict_to_json(tag_json, 'temp_tag_info.json')
+                    result = attach_table_tag(project_id, dataset, table, template, tmplt_loc, 'temp_tag_info.json')
+                    if result == 0:
+                        os.remove('temp_tag_info.json')
                 os.remove(f"./{tag_file.split('/')[-1]}")
+                move_file_gcs(project_id, bucket, tag_file, bucket, f"{processed}/{tag_file.split('/')[-1]}.done")
+                
     return True
