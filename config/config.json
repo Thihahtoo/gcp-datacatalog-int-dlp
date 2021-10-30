@@ -1,10 +1,11 @@
 {
     "project_id": "acn-uki-ds-data-ai-project",
-    "bucket": "uki_ds_data_catalog",
-    "landing_folder": "template/landing",
-    "processed_folder": "template/processed",
     "run_local": false,
-    "tag_landing_folder": "tags/landing",
-    "tag_processed_folder": "tags/processed",
+    "template_landing_bucket": "uki_ds_data_catalog",
+    "template_archive_bucket": "uki_ds_data_catalog_archived",
+    "template_folder": "templates",
+    "tag_landing_bucket": "uki_ds_data_catalog",
+    "tag_archive_bucket": "uki_ds_data_catalog_archived",
+    "tag_folder": "tags",
     "temp_folder": "/tmp/"
 }
