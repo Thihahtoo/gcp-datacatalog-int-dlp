@@ -1,5 +1,5 @@
-from .utils import run_shell_cmd, read_json
-from .gcs_operation import list_file_gcs, read_json_gcs, move_file_gcs
+from utils.utils import run_shell_cmd, read_json
+from utils.gcs_operation import list_file_gcs, read_json_gcs, move_file_gcs
 import os
 from google.cloud import datacatalog
 
@@ -44,12 +44,39 @@ def create_template(project_id, template_id, location, display_name, fields):
         print(f"{e}")
     return True
 
+def check_template_exist(project_id, template_id, location):
+    # check the tag template if it is existing
+    datacatalog_client = datacatalog.DataCatalogClient()
+    scope = datacatalog.SearchCatalogRequest.Scope()
+    scope.include_project_ids.append(project_id)
+    results = datacatalog_client.search_catalog(scope=scope, query=f'type=tag_template location={location} name:{template_id}')
+    fetched_results = [result.relative_resource_name for result in results]
+    full_name = f"projects/{project_id}/locations/{location}/tagTemplates/{template_id}"
+    if full_name in fetched_results:
+        print(f"Exist: {full_name}")
+        return True
+    else:
+        return False
+
+def get_template(project_id, template_id, location):
+    # get template definition
+    datacatalog_client = datacatalog.DataCatalogClient()
+    request = datacatalog.GetTagTemplateRequest()
+    request.name = f'projects/{project_id}/locations/{location}/tagTemplates/{template_id}'
+    result = datacatalog_client.get_tag_template(request=request)
+    return result
+
 def delete_template(project_id, template_id, location):
-    gdc_delete_template = (f"gcloud data-catalog tag-templates delete {template_id} --force --quiet "
-                            f"--location={location} "
-                            f"--project={project_id}")
-    result = run_shell_cmd(gdc_delete_template)
-    return result.returncode
+    # get template definition
+    datacatalog_client = datacatalog.DataCatalogClient()
+    request = datacatalog.DeleteTagTemplateRequest()
+    request.name = f'projects/{project_id}/locations/{location}/tagTemplates/{template_id}'
+    request.force = True
+    tmpl_exist = check_template_exist(project_id, template_id, location)
+    if tmpl_exist:
+        result = datacatalog_client.delete_tag_template(request=request)
+        print(f"Deleted: {request.name}")
+        return result
 
 def read_and_create_tag_template():
     job_config = read_json("config/config.json")
