@@ -82,9 +82,9 @@ def read_and_create_tag_template():
     job_config = read_json("config/config.json")
 
     project_id = job_config["project_id"]
-    bucket = job_config["bucket"]
-    landing = job_config["landing_folder"]
-    processed = job_config["processed_folder"]  
+    landing_bucket = job_config["template_landing_bucket"]
+    archive_bucket = job_config["template_archive_bucket"]
+    template_folder = job_config["template_folder"]
 
     if job_config["run_local"]:
         for tmpl_file in os.listdir("tag_template/landing/"):
@@ -96,13 +96,13 @@ def read_and_create_tag_template():
                 if result:
                     os.rename(f"tag_template/landing/{tmpl_file}", f"tag_template/processed/{tmpl_file}.done")
     else:
-        gcs_list = list_file_gcs(project_id, bucket, f"{landing}/template")
+        gcs_list = list_file_gcs(project_id, landing_bucket, f"{template_folder}/template")
         for tmpl_file in gcs_list:
             if tmpl_file.endswith(".json"):
-                tmpl_cfg = read_json_gcs(project_id, bucket, tmpl_file)
+                tmpl_cfg = read_json_gcs(project_id, landing_bucket, tmpl_file)
                 # delete template when existed
                 delete_template(project_id, tmpl_cfg["template_id"], tmpl_cfg["location"])
                 result = create_template(project_id, tmpl_cfg["template_id"], tmpl_cfg["location"], tmpl_cfg["display_name"], tmpl_cfg["fields"])
                 if result:
-                    move_file_gcs(project_id, bucket, tmpl_file, bucket, f"{processed}/{tmpl_file.split('/')[-1]}.done")
+                    move_file_gcs(project_id, landing_bucket, tmpl_file, archive_bucket, f"{template_folder}/{tmpl_file.split('/')[-1]}.done")
     return True

@@ -1,8 +1,29 @@
 {
-    "template_id": "template_demo2",
+    "template_id": "template_demo",
     "location": "europe-west2",
-    "display_name": "Demo Tag Template 2",
+    "display_name": "Demo Tag Template",
     "fields": [
+        {
+            "id": "project_name",
+            "display_name": "project_name",
+            "type": "string",
+            "required": true,
+            "description": "Project name of the table"
+        },
+        {
+            "id": "dataset_name",
+            "display_name": "dataset_name",
+            "type": "string",
+            "required": true,
+            "description": "Dataset name of the table"
+        },
+        {
+            "id": "table_name",
+            "display_name": "table_name",
+            "type": "string",
+            "required": true,
+            "description": "Name of the table"
+        },
         {
             "id": "source",
             "display_name": "Source of data asset",
