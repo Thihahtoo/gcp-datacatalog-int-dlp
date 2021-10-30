@@ -5,5 +5,6 @@
     "processed_folder": "template/processed",
     "run_local": false,
     "tag_landing_folder": "tags/landing",
-    "tag_processed_folder": "tags/processed"
+    "tag_processed_folder": "tags/processed",
+    "temp_folder": "/tmp/"
 }
