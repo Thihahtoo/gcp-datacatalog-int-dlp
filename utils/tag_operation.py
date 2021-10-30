@@ -81,9 +81,9 @@ def read_and_attach_tag():
     job_config = read_json("config/config.json")
 
     project_id = job_config["project_id"]
-    bucket = job_config["bucket"]
-    landing = job_config["tag_landing_folder"]
-    processed = job_config["tag_processed_folder"]
+    landing_bucket = job_config["tag_landing_bucket"]
+    archive_bucket = job_config["tag_archive_bucket"]
+    tag_folder = job_config["tag_folder"]
     temp_folder = job_config["temp_folder"]
 
     if job_config["run_local"]:
@@ -102,10 +102,10 @@ def read_and_attach_tag():
                 os.rename(f"tags/landing/{tag_file}", f"tags/processed/{tag_file}.done")
 
     else:
-        gcs_list = list_file_gcs(project_id, bucket, f"{landing}/")
+        gcs_list = list_file_gcs(project_id, landing_bucket, f"{tag_folder}/")
         for tag_file in gcs_list:
             if tag_file.endswith(".csv"):
-                download_file_gcs(project_id, bucket, tag_file, f"{temp_folder}{tag_file.split('/')[-1]}")
+                download_file_gcs(project_id, landing_bucket, tag_file, f"{temp_folder}{tag_file.split('/')[-1]}")
                 tag_info_list = read_tag_csv(f"{temp_folder}{tag_file.split('/')[-1]}")
                 for tag_info in tag_info_list:
                     dataset = tag_info['dataset_name']
@@ -117,6 +117,6 @@ def read_and_attach_tag():
                     attach_table_tag(project_id, dataset, table, template, tmplt_loc, tag_json)
                     
                 os.remove(f"{temp_folder}{tag_file.split('/')[-1]}")
-                move_file_gcs(project_id, bucket, tag_file, bucket, f"{processed}/{tag_file.split('/')[-1]}.done")
+                move_file_gcs(project_id, landing_bucket, tag_file, archive_bucket, f"{tag_folder}/{tag_file.split('/')[-1]}.done")
 
     return True
