@@ -1,0 +1,2 @@
+google-cloud-storage>=1.42.3
+google-cloud-datacatalog>=3.4.3
