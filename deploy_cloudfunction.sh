@@ -1,5 +1,9 @@
 #!/bin/bash
 
+FUNCTION_NAME="data_catalog"
+LOCATION="europe-west2"
+TRIGGER_BUCKET="uki_ds_data_catalog"
+
 sudo apt install zip
 sudo yum install zip
 
@@ -9,11 +13,11 @@ cd ./temp/
 unzip Data_Catalog.zip
 rm Data_Catalog.zip
 
-gcloud functions deploy data_catalog \
+gcloud functions deploy $FUNCTION_NAME \
 --entry-point entry_point \
 --runtime python37 \
---region europe-west2 \
---trigger-resource uki_ds_data_catalog \
+--region $LOCATION \
+--trigger-resource $TRIGGER_BUCKET \
 --trigger-event google.storage.object.finalize
 
 rm -rf ../temp/
