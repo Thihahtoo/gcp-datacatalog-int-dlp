@@ -1,8 +1,8 @@
 {
-    "template_id": "template_data_catalog",
+    "template_id": "template_data_catalog_v_3",
     "location": "europe-west2",
-    "display_name": "Data Catalog Template",
-    "description": "Test template for data catalog",
+    "display_name": "Data Catalog Template V 3",
+    "description": "Test template for data catalog v 3",
     "fields": [
         {
             "id": "project_name",

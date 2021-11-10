@@ -78,6 +78,27 @@ def delete_template(project_id, template_id, location):
         print(f"Deleted: {request.name}")
         return result
 
+def get_latest_template_id(project_id, template_prefix, location):
+    datacatalog_client = datacatalog.DataCatalogClient()
+    scope = datacatalog.SearchCatalogRequest.Scope()
+    scope.include_project_ids.append(project_id)
+    results = datacatalog_client.search_catalog(scope=scope, query=f'type=tag_template location={location} name:{template_prefix}')
+    fetched_results = [result.relative_resource_name for result in results]
+    latest_tmpl = ""
+    if fetched_results:
+        if len(fetched_results) > 1:
+            print("more than one template found.")
+            print("fetching lastest template id.")
+            max_version = max([tmpl.split("_")[-1] for tmpl in fetched_results])
+            for tmpl in fetched_results:
+                if tmpl.split("_")[-1] == max_version:
+                    latest_tmpl = tmpl.split("/")[-1]
+        else:
+            latest_tmpl = fetched_results[0].split("/")[-1]
+        return latest_tmpl
+    else:
+        return ""
+
 def read_and_create_tag_template():
     job_config = read_json("config/config.json")
 

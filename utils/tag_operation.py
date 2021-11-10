@@ -1,6 +1,6 @@
 from utils.utils import run_shell_cmd, read_json, read_tag_csv, prepare_dict
 from utils.gcs_operation import list_file_gcs, download_file_gcs, move_file_gcs
-from utils.tmpl_operation import get_template
+from utils.tmpl_operation import get_template, get_latest_template_id
 import os
 from google.cloud import datacatalog
 
@@ -47,26 +47,34 @@ def attach_table_tag(project, dataset, table, template, template_location, tag_j
     tag = datacatalog.Tag()
 
     # get template definition to define field types
+    print(f"Creating tag using template : {template}, location: {template_location}")
     tmpl = get_template(project, template, template_location)
 
     tag.template = tmpl.name
+
+    # prepare dictionary for correct data types
+    tag_json = prepare_dict(tag_json)
     
+    # get fields from template to filter fields which are only availabe in template
+    tmpl_field = [field for field in tmpl.fields]
+
     for key, value in tag_json.items():
-        tag.fields[key] = datacatalog.TagField()
+        if key in tmpl_field:
+            tag.fields[key] = datacatalog.TagField()
 
-        # get the field type from template according to field
-        field_type = tmpl.fields[key].type_
+            # get the field type from template according to field
+            field_type = tmpl.fields[key].type_
 
-        if field_type.primitive_type:
-            if str(field_type.primitive_type) == 'PrimitiveType.STRING':
-                tag.fields[key].string_value = value
-            if str(field_type.primitive_type) == 'PrimitiveType.DOUBLE':
-                tag.fields[key].double_value = value
-            if str(field_type.primitive_type) == 'PrimitiveType.BOOL':
-                tag.fields[key].bool_value = value
+            if field_type.primitive_type:
+                if str(field_type.primitive_type) == 'PrimitiveType.STRING':
+                    tag.fields[key].string_value = value
+                if str(field_type.primitive_type) == 'PrimitiveType.DOUBLE':
+                    tag.fields[key].double_value = value
+                if str(field_type.primitive_type) == 'PrimitiveType.BOOL':
+                    tag.fields[key].bool_value = value
 
-        if field_type.enum_type:
-            tag.fields[key].enum_value.display_name = value
+            if field_type.enum_type:
+                tag.fields[key].enum_value.display_name = value
 
     # get table entry and remove tag if existed.
     table_entry = get_table_entry(project, dataset, table)
@@ -85,6 +93,15 @@ def read_and_attach_tag():
     archive_bucket = job_config["tag_archive_bucket"]
     tag_folder = job_config["tag_folder"]
     temp_folder = job_config["temp_folder"]
+    tmpl_prefix = job_config["template_prefix"]
+    default_tmpl = job_config["default_template"]
+    default_tmpl_loc = job_config["default_template_location"]
+
+    latest_tmpl = get_latest_template_id(project_id, tmpl_prefix, default_tmpl_loc)
+    if latest_tmpl != "":
+        default_tmpl = latest_tmpl
+
+    print(default_tmpl)
 
     if job_config["run_local"]:
         for tag_file in os.listdir("tags/landing/"):
@@ -93,10 +110,16 @@ def read_and_attach_tag():
                 for tag_info in tag_info_list:
                     dataset = tag_info['dataset_name']
                     table = tag_info['table_name']
-                    template = tag_info['template_id']
-                    tmplt_loc = tag_info['template_location']
-                    tag_json = prepare_dict(tag_info['tag_json'])
-                    # dict_to_json(tag_json, 'temp_tag_info.json')
+                    # use default template if template id is not provided
+                    if tag_info['template_id'] == "":
+                        template = default_tmpl
+                    else:
+                        template = tag_info['template_id']
+                    if tag_info['template_location'] == "":
+                        tmplt_loc = default_tmpl_loc
+                    else:
+                        tmplt_loc = tag_info['template_location']
+                    tag_json = tag_info['tag_json']
                     attach_table_tag(project_id, dataset, table, template, tmplt_loc, tag_json)
             
                 os.rename(f"tags/landing/{tag_file}", f"tags/processed/{tag_file}.done")
@@ -110,10 +133,16 @@ def read_and_attach_tag():
                 for tag_info in tag_info_list:
                     dataset = tag_info['dataset_name']
                     table = tag_info['table_name']
-                    template = tag_info['template_id']
-                    tmplt_loc = tag_info['template_location']
-                    tag_json = prepare_dict(tag_info['tag_json'])
-                    # dict_to_json(tag_json, 'temp_tag_info.json')
+                    # use default template if template id is not provided
+                    if tag_info['template_id'] == "":
+                        template = default_tmpl
+                    else:
+                        template = tag_info['template_id']
+                    if tag_info['template_location'] == "":
+                        tmplt_loc = default_tmpl_loc
+                    else:
+                        tmplt_loc = tag_info['template_location']
+                    tag_json = tag_info['tag_json']
                     attach_table_tag(project_id, dataset, table, template, tmplt_loc, tag_json)
                     
                 os.remove(f"{temp_folder}{tag_file.split('/')[-1]}")
