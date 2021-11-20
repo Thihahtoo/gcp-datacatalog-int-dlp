@@ -1,6 +1,6 @@
 {
     "project_id": "acn-uki-ds-data-ai-project",
-    "run_local": false,
+    "run_local": true,
     "template_landing_bucket": "uki_ds_data_catalog",
     "template_archive_bucket": "uki_ds_data_catalog_archived",
     "template_folder": "templates",
