@@ -1,3 +1,0 @@
-﻿project_name,dataset_name,table_name,source,num_rows,has_pii,pii_type,template_id,template_location
-acn-uki-ds-data-ai-project,data_catalog_dev,covid_worldwide,BigQuery,1000,FALSE,,template_demo,europe-west2
-acn-uki-ds-data-ai-project,data_catalog_dev,covid_worldwide_new,BigQuery,1000,TRUE,EMAIL_ADDRESS,template_demo,europe-west2
