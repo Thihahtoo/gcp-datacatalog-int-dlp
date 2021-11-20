@@ -10,5 +10,8 @@
     "temp_folder": "/tmp/",
     "template_prefix": "template_data_catalog_v_",
     "default_template": "template_data_catalog_v_0",
-    "default_template_location": "europe-west2"
+    "default_template_location": "europe-west2",
+    "column_template_prefix": "template_column_v_",
+    "default_column_template": "template_column_v_0",
+    "default_column_template_location": "europe-west2"
 }

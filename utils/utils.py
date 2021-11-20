@@ -15,24 +15,7 @@ def read_tag_csv(file_name):
     with open(file_name, newline='', encoding='utf-8-sig') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            row_dict = {}
-            row_dict['project_name'] = row['project_name']
-            row_dict['dataset_name'] = row['dataset_name']
-            row_dict['table_name'] = row['table_name']
-            # check template id is provided or not
-            if 'template_id' in row.keys() and row['template_id'] != "":
-                row_dict['template_id'] = row['template_id']
-                row.pop('template_id')
-            else:
-                row_dict['template_id'] = ""
-            if 'template_location' in row.keys() and row['template_location'] != "":
-                row_dict['template_location'] = row['template_location']
-                row.pop('template_location')
-            else:
-                row_dict['template_location'] = ""
-                
-            row_dict['tag_json'] = row
-            result.append(row_dict)
+            result.append(row)
     return result
 
 def dict_to_json(dict_obj ,filename):
