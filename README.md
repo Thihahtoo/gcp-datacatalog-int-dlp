@@ -69,7 +69,19 @@ Follow the below steps to create Tag for Bigquery tables:
     |acn-uki-ds-data-ai-project|data_catalog_dev|covid_worldwide|BigQuery|1000|FALSE||template_demo|europe-west2|
     |acn-uki-ds-data-ai-project|data_catalog_dev|covid_worldwide_new|BigQuery|1000|TRUE|EMAIL_ADDRESS|template_demo|europe-west2|
 
-    ***Note***: **dataset_name**, **table_name**, **template_id** and **template_location** are required fields to successfully create the tag.
+    ***Note***: **dataset_name** and **table_name** are required fields to successfully create the tag. The script will only tag fields which are available in template. Any other fields which are not in template will be cut off.
+    *   If **template_id** and **template_location** are not provided, it will use the latest template as provided in `config/config.json`. Configure `"default_template"` and `"template_prefix"` to help choose the latest template. For example, if your templates are (**template_v_1**,**template_v_2**...), set 
+        ```json
+        "template_prefix":"template_v_",
+        "default_template": "template_v_0",
+        "default_template_location": "europe-west2",
+        ```
+    *   If **column_name** field is provided in the csv, it will tag to column instead of table. Template for column level tagging can be configure separately using `"default_column_template"` and `"column_template_prefix"` in `config/config.json`. For example,
+        ```json
+        "column_template_prefix": "template_column_v_",
+        "default_column_template": "template_column_v_0",
+        "default_column_template_location": "europe-west2"
+        ```
 
 2.  **To pick up file from local directory**:
     *   Set the ```"run_local": true``` in `config/config.json`.

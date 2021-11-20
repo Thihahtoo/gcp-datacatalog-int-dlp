@@ -87,8 +87,6 @@ def get_latest_template_id(project_id, template_prefix, location):
     latest_tmpl = ""
     if fetched_results:
         if len(fetched_results) > 1:
-            print("more than one template found.")
-            print("fetching lastest template id.")
             max_version = max([tmpl.split("_")[-1] for tmpl in fetched_results])
             for tmpl in fetched_results:
                 if tmpl.split("_")[-1] == max_version:
