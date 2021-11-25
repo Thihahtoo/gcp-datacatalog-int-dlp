@@ -1,0 +1,61 @@
+{
+    "taxonomy_display_name": "demo_taxonomy",
+    "location": "eu",
+    "description": "Demo Taxonomy",
+    "policy_tags": [
+        {
+            "display_name": "High",
+            "description": "High sensitivity",
+            "sub_tag": [
+                {
+                    "display_name": "SSN",
+                    "description": "Social security number"
+                },
+                {
+                    "display_name": "SSN1",
+                    "description": "Social security number",
+                    "sub_tag": [
+                        {
+                            "display_name": "SSN2",
+                            "description": "Social security number"
+                        },
+                        {
+                            "display_name": "SSN3",
+                            "description": "Social security number",
+                            "sub_tag": [
+                                {
+                                    "display_name": "SSN4",
+                                    "description": "Social security number"
+                                },
+                                {
+                                    "display_name": "SSN5",
+                                    "description": "Social security number",
+                                    "sub_tag": [
+                                        {
+                                            "display_name": "SSN6",
+                                            "description": "Social security number"
+                                        },
+                                        {
+                                            "display_name": "SSN7",
+                                            "description": "Social security number"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "display_name": "Medium",
+            "description": "Medium sensitivity",
+            "sub_tag": [
+                {
+                    "display_name": "Address",
+                    "description": "Private Address"
+                }
+            ]
+        }
+    ]
+}

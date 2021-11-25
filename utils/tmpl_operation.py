@@ -97,7 +97,7 @@ def get_latest_template_id(project_id, template_prefix, location):
     else:
         return ""
 
-def read_and_create_tag_template():
+def create_tag_template_from_file():
     job_config = read_json("config/config.json")
 
     project_id = job_config["project_id"]
