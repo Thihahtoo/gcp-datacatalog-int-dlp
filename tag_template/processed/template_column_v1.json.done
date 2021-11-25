@@ -1,0 +1,24 @@
+{
+    "template_id": "template_column_v_1",
+    "location": "europe-west2",
+    "display_name": "Tag Template for Column Level v1",
+    "fields": [
+        {
+            "id": "has_pii",
+            "display_name": "Has PII",
+            "type": "bool",
+            "required": false
+        },
+        {
+            "id": "pii_type",
+            "display_name": "PII type",
+            "type": "enum",
+            "allowed_values": [
+                "EMAIL_ADDRESS",
+                "US_SOCIAL_SECURITY_NUMBER",
+                "NONE"
+            ],
+            "required": false
+        }
+    ]
+}

@@ -1,17 +1,36 @@
 {
     "project_id": "acn-uki-ds-data-ai-project",
     "run_local": true,
+    "extract_bucket": "uki_ds_data_catalog_extract",
+    "extract_folder": "catalog_extract",
+    "extract_destination_dataset": "data_catalog_extract",
+    "extract_destination_table": "data_catalog_extract_info",
+
     "template_landing_bucket": "uki_ds_data_catalog",
     "template_archive_bucket": "uki_ds_data_catalog_archived",
     "template_folder": "templates",
+
     "tag_landing_bucket": "uki_ds_data_catalog",
     "tag_archive_bucket": "uki_ds_data_catalog_archived",
     "tag_folder": "tags",
+
     "temp_folder": "/tmp/",
-    "template_prefix": "template_data_catalog_v_",
-    "default_template": "template_data_catalog_v_0",
-    "default_template_location": "europe-west2",
+
+    "dataset_template_prefix": "template_dataset_v_",
+    "default_dataset_template": "template_dataset_v_0",
+    "default_dataset_template_location": "europe-west2",
+
+    "table_template_prefix": "template_table_v_",
+    "default_table_template": "template_table_v_0",
+    "default_table_template_location": "europe-west2",
+
     "column_template_prefix": "template_column_v_",
     "default_column_template": "template_column_v_0",
-    "default_column_template_location": "europe-west2"
+    "default_column_template_location": "europe-west2",
+
+    "attach_policy_tag": true,
+    "taxonomy_landing_bucket": "uki_ds_data_catalog",
+    "taxonomy_archive_bucket": "uki_ds_data_catalog_archived",
+    "taxonomy_folder": "taxonomies",
+    "default_taxonomy": "Business Critical"
 }

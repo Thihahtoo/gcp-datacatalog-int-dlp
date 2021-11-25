@@ -1,0 +1,193 @@
+{
+    "template_id": "template_table_v_2",
+    "location": "europe-west2",
+    "display_name": "Data Catalog Table Template V 2",
+    "description": "Test template for data catalog v 2",
+    "fields": [
+        {
+            "id": "project_name",
+            "display_name": "project_name",
+            "type": "string",
+            "required": true,
+            "description": "Project name of the table"
+        },
+        {
+            "id": "dataset_name",
+            "display_name": "dataset_name",
+            "type": "string",
+            "required": true,
+            "description": "Dataset name of the table"
+        },
+        {
+            "id": "table_name",
+            "display_name": "table_name",
+            "type": "string",
+            "required": true,
+            "description": "Name of the table"
+        },
+        {
+            "id": "table_description",
+            "display_name": "table_description",
+            "type": "string",
+            "required": false,
+            "description": "Description of the table"
+        },
+        {
+            "id": "source_system",
+            "display_name": "source_system",
+            "type": "string",
+            "required": false,
+            "description": "Source system e.g. SAP"
+        },
+        {
+            "id": "business_glossary",
+            "display_name": "business_glossary",
+            "type": "string",
+            "required": false,
+            "description": "The business processes where the table is used"
+        },
+        {
+            "id": "transformation_logic",
+            "display_name": "transformation_logic",
+            "type": "string",
+            "required": false,
+            "description": "Specify the breif transformation logic in simple terms"
+        },
+        {
+            "id": "subject_domain",
+            "display_name": "subject_domain",
+            "type": "string",
+            "required": false,
+            "description": "Specify the subject area within that business process to which the table belongs to"
+        },
+        {
+            "id": "layer",
+            "display_name": "layer",
+            "type": "string",
+            "required": false,
+            "description": "Layer of the table e.g. Transformation"
+        },
+        {
+            "id": "granularity",
+            "display_name": "granularity",
+            "type": "string",
+            "required": false,
+            "description": "Grain of the table"
+        },
+        {
+            "id": "contains_pii",
+            "display_name": "contains_pii",
+            "type": "bool",
+            "required": false,
+            "description": "Yes if there are pii attributes in the table otherwise No"
+        },
+        {
+            "id": "pii_columns",
+            "display_name": "pii_columns",
+            "type": "string",
+            "required": false,
+            "description": "Specify the pii columns if any, otherwise blank"
+        },
+        {
+            "id": "pii_type",
+            "display_name": "PII type",
+            "type": "enum",
+            "allowed_values": [
+                "EMAIL_ADDRESS",
+                "US_SOCIAL_SECURITY_NUMBER",
+                "NONE"
+            ],
+            "required": false,
+            "description": "Specify the types pii columns if any, otherwise blank"
+        },
+        {
+            "id": "contains_sensitive",
+            "display_name": "contains_sensitive",
+            "type": "bool",
+            "required": false,
+            "description": "Yes if there are any sensitive attributes otherwise No"
+        },
+        {
+            "id": "sensitive_columns",
+            "display_name": "sensitive_columns",
+            "type": "string",
+            "required": false,
+            "description": "Specify the sensitive columns if any, otherwise blank"
+        },
+        {
+            "id": "sensitive_type",
+            "display_name": "sensitive_type",
+            "type": "enum",
+            "allowed_values": [
+                "EMAIL_ADDRESS",
+                "US_SOCIAL_SECURITY_NUMBER",
+                "NONE"
+            ],
+            "required": false,
+            "description": "Specify the types of sensitive columns if any, otherwise blank"
+        },
+        {
+            "id": "classification",
+            "display_name": "classification",
+            "type": "string",
+            "required": false,
+            "description": "Classification of data e.g. Restricted, Confidential etc"
+        },
+        {
+            "id": "hold_profiled_data",
+            "display_name": "hold_profiled_data",
+            "type": "bool",
+            "required": false,
+            "description": "Yes if data in the table is profiled otherwise No"
+        },
+        {
+            "id": "data_sign_off",
+            "display_name": "data_sign_off",
+            "type": "bool",
+            "required": false,
+            "description": "Yes if data in the table is profiled otherwise No"
+        },
+        {
+            "id": "retention",
+            "display_name": "retention",
+            "type": "string",
+            "required": false,
+            "description": "Specify the retention period of the table"
+        },
+        {
+            "id": "crop_number",
+            "display_name": "crop_number",
+            "type": "double",
+            "required": false,
+            "description": "Capture records of processing, generally this is created at the time of requirement creation"
+        },
+        {
+            "id": "frequency",
+            "display_name": "frequency",
+            "type": "double",
+            "required": false,
+            "description": "Frequency of the table updates"
+        },
+        {
+            "id": "data_owner",
+            "display_name": "data_owner",
+            "type": "string",
+            "required": false,
+            "description": "Specify the data owner to whom anyone can reach out in case required"
+        },
+        {
+            "id": "data_stewart",
+            "display_name": "data_stewart",
+            "type": "string",
+            "required": false,
+            "description": "Specify the data stewart for that data"
+        },
+        {
+            "id": "consumer_group",
+            "display_name": "consumer_group",
+            "type": "string",
+            "required": false,
+            "description": "Specify the group/department who will consume this data e.g. HR"
+        }
+    ]
+}
