@@ -48,7 +48,8 @@ def remove_tag(table_entry, project, template, template_location, column_name=""
 
     return True
 
-def list_tags(project, dataset, table=""):
+def get_tag_info(project, dataset, table=""):
+    # get all the tag info related with dataset or table
     datacatalog_client = datacatalog.DataCatalogClient()
     request = datacatalog.ListTagsRequest()
     entry = get_entry(project, dataset, table)
@@ -56,15 +57,25 @@ def list_tags(project, dataset, table=""):
     tags = datacatalog_client.list_tags(request=request)
     result = []
     for tag in tags:
-        tag_info = {"project_id":"", "dataset_name":"", "table_name":"", "column_name":"", "template_id":"", "template_location":""}
-        tag_info["project_id"] = project
-        tag_info["dataset_name"] = dataset
-        tag_info["table_name"] = table
-        tag_info["column_name"] = tag.column
-        tag_info["template_id"] = tag.template.split("/")[-1]
-        tag_info["template_location"] = tag.template.split("/")[3]
-        result.append(tag_info)
-        
+        tag_field = str(tag).split('fields ')[1:]
+        for field in tag_field:
+            tag_info = {"project_id":"", "dataset_name":"", "table_name":"", "column_name":"", 
+                        "template_id":"", "template_location":"", "tag_field_id":"", "tag_field_value":""}
+            tag_info["project_id"] = project
+            tag_info["dataset_name"] = dataset
+            tag_info["table_name"] = table
+            tag_info["column_name"] = tag.column
+            tag_info["template_id"] = tag.template.split("/")[-1]
+            tag_info["template_location"] = tag.template.split("/")[3]
+
+            # retrieve filed value manually as ther is no provided way
+            key = field.split("}")[0].split(":")[1].split('"')[1]
+            value = field.split("}")[0].split(":")[-1].strip().replace('"','')
+            tag_info["tag_field_id"] = key
+            tag_info["tag_field_value"] = value
+
+            result.append(tag_info)
+
     return result
 
 def attach_tag(project, template, template_location, tag_info):
@@ -123,7 +134,6 @@ def attach_tag(project, template, template_location, tag_info):
         print(f"Created Table Tag: {tag.name}")
 
     return True
-
 
 def read_and_attach_tag():
     job_config = read_json("config/config.json")
