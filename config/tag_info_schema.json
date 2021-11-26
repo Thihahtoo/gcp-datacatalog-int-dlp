@@ -1,0 +1,11 @@
+{
+    "project_id": "STRING",
+    "dataset_name": "STRING",
+    "table_name": "STRING",
+    "column_name": "STRING",
+    "template_id": "STRING",
+    "template_location": "STRING",
+    "tag_field_id": "STRING",
+    "tag_field_value": "STRING",
+    "extract_timestamp": "STRING"
+}

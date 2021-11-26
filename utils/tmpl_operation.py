@@ -44,15 +44,55 @@ def create_template(project_id, template_id, location, display_name, fields):
         print(f"{e}")
     return True
 
-def check_template_exist(project_id, template_id, location):
-    # check the tag template if it is existing
+def list_template(project_id):
+    # list all the templates in project
     datacatalog_client = datacatalog.DataCatalogClient()
     scope = datacatalog.SearchCatalogRequest.Scope()
     scope.include_project_ids.append(project_id)
-    results = datacatalog_client.search_catalog(scope=scope, query=f'type=tag_template location={location} name:{template_id}')
-    fetched_results = [result.relative_resource_name for result in results]
+    result = []
+    templates = datacatalog_client.search_catalog(scope=scope, query=f'type=tag_template')
+    for tmpl in templates:
+        result.append(tmpl.relative_resource_name)
+    return result
+
+def get_template_info(project_id, template_id, location):
+    # get all the template info
+    tmpl = get_template(project_id, template_id, location)
+    
+    result = []
+    tmpl_field = str(tmpl).split('fields ')[1:]
+    for field in tmpl_field:
+        tmpl_info = {"project_id":"", "template_id":"", "template_loc":"", 
+                    "field_id":"", "field_display_name":"", "field_type":"", "field_allowed_values":"",
+                    "requried_field":False, "field_description":""}
+        tmpl_info["project_id"] = project_id
+        tmpl_info["template_id"] = template_id
+        tmpl_info["template_loc"] = location
+        tmpl_info["field_id"] = field.split('\n')[1].split(':')[1].strip().replace('"','')
+        tmpl_info["field_display_name"] = (field.split('display_name:')[1].split('\n')[0].strip().replace('"','') 
+                                            if "display_name" in field else "")
+
+        if "enum_type" in field:
+            tmpl_info["field_type"] = "ENUM"
+            for value in field.split('type_')[1].split('\n'):
+                if "display_name" in value:
+                    tmpl_info["field_allowed_values"] = tmpl_info["field_allowed_values"] + value.split(':')[1].strip().replace('"','') + ";"
+        else:
+            tmpl_info["field_type"] = field.split('type_')[1].split('}')[0].split(':')[1].strip()
+        
+        tmpl_info["field_description"] = (field.split('description:')[1].split('\n')[0].strip().replace('"','') 
+                                            if "description" in field else "")
+
+        if "is_required" in field:
+            tmpl_info["requried_field"] = True
+        result.append(tmpl_info)
+    return result
+
+def check_template_exist(project_id, template_id, location):
+    # check the tag template if it is existing
+    templates = list_template(project_id)
     full_name = f"projects/{project_id}/locations/{location}/tagTemplates/{template_id}"
-    if full_name in fetched_results:
+    if full_name in templates:
         print(f"Exist: {full_name}")
         return True
     else:
@@ -67,7 +107,7 @@ def get_template(project_id, template_id, location):
     return result
 
 def delete_template(project_id, template_id, location):
-    # get template definition
+    # check if existed and delete template
     datacatalog_client = datacatalog.DataCatalogClient()
     request = datacatalog.DeleteTagTemplateRequest()
     request.name = f'projects/{project_id}/locations/{location}/tagTemplates/{template_id}'

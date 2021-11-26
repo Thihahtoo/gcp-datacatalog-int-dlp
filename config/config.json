@@ -1,10 +1,14 @@
 {
     "project_id": "acn-uki-ds-data-ai-project",
     "run_local": true,
+
     "extract_bucket": "uki_ds_data_catalog_extract",
     "extract_folder": "catalog_extract",
     "extract_destination_dataset": "data_catalog_extract",
-    "extract_destination_table": "data_catalog_extract_info",
+    "tag_extract_destination_table": "data_catalog_tag_extract",
+    "tag_extract_table_schema": "config/tag_info_schema.json",
+    "template_extract_destination_table": "data_catalog_template_extract",
+    "template_extract_table_schema": "config/template_info_schema.json",
 
     "template_landing_bucket": "uki_ds_data_catalog",
     "template_archive_bucket": "uki_ds_data_catalog_archived",
