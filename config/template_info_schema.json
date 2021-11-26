@@ -1,0 +1,12 @@
+{
+    "project_id": "STRING", 
+    "template_id": "STRING", 
+    "template_loc": "STRING", 
+    "field_id": "STRING", 
+    "field_display_name": "STRING", 
+    "field_type": "STRING", 
+    "field_allowed_values": "STRING",
+    "requried_field": "STRING", 
+    "field_description": "STRING", 
+    "extract_timestamp": "STRING"
+}
