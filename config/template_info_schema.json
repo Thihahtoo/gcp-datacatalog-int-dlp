@@ -1,6 +1,7 @@
 {
     "project_id": "STRING", 
     "template_id": "STRING", 
+    "template_display_name": "STRING",
     "template_loc": "STRING", 
     "field_id": "STRING", 
     "field_display_name": "STRING", 

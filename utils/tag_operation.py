@@ -1,7 +1,7 @@
 from utils.utils import read_json, read_tag_csv, prepare_dict
-from utils.gcs_operation import list_file_gcs, download_file_gcs, move_file_gcs
+from utils.gcs_operation import list_file_gcs, download_file_gcs, move_file_gcs, upload_file_to_gcs
 from utils.tmpl_operation import get_template, get_latest_template_id
-import os
+import os, csv
 from google.cloud import datacatalog
 
 def get_entry(project, dataset, table):
@@ -13,8 +13,11 @@ def get_entry(project, dataset, table):
     if table != "":
         resource_name = resource_name + f"/tables/{table}"
 
-    table_entry = datacatalog_client.lookup_entry(request={"linked_resource": resource_name})
-    return table_entry.name
+    try:
+        table_entry = datacatalog_client.lookup_entry(request={"linked_resource": resource_name})
+        return table_entry.name
+    except Exception:
+        return ""
 
 def remove_tag(table_entry, project, template, template_location, column_name=""):
     # remove tag for a table
@@ -88,17 +91,16 @@ def attach_tag(project, template, template_location, tag_info):
     tmpl = get_template(project, template, template_location)
 
     tag.template = tmpl.name
-
+    
     # prepare dictionary for correct data types
-    tag_info = prepare_dict(tag_info)
-
-    dataset = tag_info["dataset_name"] if "dataset_name" in tag_info.keys() and tag_info["dataset_name"] != "" else ""
-    table = tag_info["table_name"] if "table_name" in tag_info.keys() and tag_info["table_name"] != "" else ""
+    result_tag_info = prepare_dict(tag_info)
+    dataset = result_tag_info["dataset_name"] if "dataset_name" in result_tag_info.keys() and result_tag_info["dataset_name"] != "" else ""
+    table = result_tag_info["table_name"] if "table_name" in result_tag_info.keys() and result_tag_info["table_name"] != "" else ""
     
     # get fields from template to filter fields which are only availabe in template
     tmpl_field = [field for field in tmpl.fields]
 
-    for key, value in tag_info.items():
+    for key, value in result_tag_info.items():
 
         if key in tmpl_field:
             tag.fields[key] = datacatalog.TagField()
@@ -119,21 +121,28 @@ def attach_tag(project, template, template_location, tag_info):
 
     # get table entry and remove tag if existed.
     entry = get_entry(project, dataset, table)
-
-    # check column level tagging or not
-    if "column_name" in tag_info.keys():
-        tag.column = tag_info["column_name"]
-        # remove column tag if existed
-        remove_tag(entry, project, template, template_location, tag_info["column_name"])
-        tag = datacatalog_client.create_tag(parent=entry, tag=tag)
-        print(f"Created Column Tag: {tag.name}")
+    if entry:
+        # check column level tagging or not
+        if "column_name" in result_tag_info.keys():
+            tag.column = result_tag_info["column_name"]
+            # remove column tag if existed
+            remove_tag(entry, project, template, template_location, result_tag_info["column_name"])
+            try:
+                tag = datacatalog_client.create_tag(parent=entry, tag=tag)
+                print(f"Attached Tag: {project}.{dataset}.{table} >> {tag.column}")
+                return True
+            except Exception:
+                print(f"Column Not Found: {project}.{dataset}.{table} >> {tag.column}")
+                return False
+        else:
+            # remove table tag if existed
+            remove_tag(entry, project, template, template_location)
+            tag = datacatalog_client.create_tag(parent=entry, tag=tag)
+            print(f"Attached Tag: {project}.{dataset}.{table}")
+            return True
     else:
-        # remove table tag if existed
-        remove_tag(entry, project, template, template_location)
-        tag = datacatalog_client.create_tag(parent=entry, tag=tag)
-        print(f"Created Table Tag: {tag.name}")
-
-    return True
+        print(f"Not Found: {project}.{dataset}.{table}")
+        return False
 
 def read_and_attach_tag():
     job_config = read_json("config/config.json")
@@ -171,46 +180,65 @@ def read_and_attach_tag():
     if latest_col_tmpl != "":
         default_col_tmpl = latest_col_tmpl
 
+    def attach_tag_info(project_id, tag_info):
+        # use default template if template id is not provided
+        if 'template_id' in tag_info.keys() and tag_info['template_id'] != "":
+            template = tag_info['template_id']
+        else:
+            # check dataset level tag
+            if "dataset_name" in tag_info.keys() and tag_info["dataset_name"] != "":
+                template = default_ds_tmpl
+            # check table level tag
+            if "table_name" in tag_info.keys() and tag_info["table_name"] != "":
+                template = default_tbl_tmpl
+            # check column level tag
+            if "column_name" in tag_info.keys() and tag_info["column_name"] != "":
+                template = default_col_tmpl
+
+        # use default template location if template location is not provided
+        if 'template_location' in tag_info.keys() and tag_info['template_location'] != "":
+            tmplt_loc = tag_info['template_location']
+        else:
+            if "dataset_name" in tag_info.keys() and tag_info["dataset_name"] != "":
+                tmplt_loc = default_ds_tmpl_loc
+            # check table level tag
+            if "table_name" in tag_info.keys() and tag_info["table_name"] != "":
+                tmplt_loc = default_tbl_tmpl_loc
+            # check column level tag or not
+            if "column_name" in tag_info.keys() and tag_info["column_name"] != "":
+                tmplt_loc = default_col_tmpl_loc
+            
+        # attach tags
+        result = attach_tag(project_id, template, tmplt_loc, tag_info)
+        return result
+
     if job_config["run_local"]:
+
         for tag_file in os.listdir("tags/landing/"):
             if tag_file.endswith(".csv"):
                 tag_info_list = read_tag_csv(f"tags/landing/{tag_file}")
                 for tag_info in tag_info_list:
 
-                    # use default template if template id is not provided
-                    if 'template_id' in tag_info.keys() and tag_info['template_id'] != "":
-                        template = tag_info['template_id']
-                    else:
-                        # check dataset level tag
-                        if "dataset_name" in tag_info.keys() and tag_info["dataset_name"] != "":
-                            template = default_ds_tmpl
-                        # check table level tag
-                        if "table_name" in tag_info.keys() and tag_info["table_name"] != "":
-                            template = default_tbl_tmpl
-                        # check column level tag
-                        if "column_name" in tag_info.keys() and tag_info["column_name"] != "":
-                            template = default_col_tmpl
+                    # call function to tag each row
+                    result = attach_tag_info(project_id, tag_info)
 
-                    # use default template location if template location is not provided
-                    if 'template_location' in tag_info.keys() and tag_info['template_location'] != "":
-                        tmplt_loc = tag_info['template_location']
-                    else:
-                        if "dataset_name" in tag_info.keys() and tag_info["dataset_name"] != "":
-                            tmplt_loc = default_ds_tmpl_loc
-                        # check table level tag
-                        if "table_name" in tag_info.keys() and tag_info["table_name"] != "":
-                            tmplt_loc = default_tbl_tmpl_loc
-                        # check column level tag or not
-                        if "column_name" in tag_info.keys() and tag_info["column_name"] != "":
-                            tmplt_loc = default_col_tmpl_loc
-                        
-                    # attach tags
-                    attach_tag(project_id, template, tmplt_loc, tag_info)
+                    # write error records to file
+                    if result == False:
+                        err_rn = tag_file.replace("error_", "")
+                        file_exist = os.path.exists(f"tags/error/error_{err_rn}")
+                        with open(f"tags/error/error_{err_rn}", 'a') as error_file:
+                            writer = csv.DictWriter(error_file, tag_info.keys())
+                            if file_exist:
+                                writer.writerow(tag_info)
+                            else:
+                                writer.writeheader()
+                                writer.writerow(tag_info)
                     print("-"*50)
-            
+                
                 os.rename(f"tags/landing/{tag_file}", f"tags/processed/{tag_file}.done")
 
     else:
+
         gcs_list = list_file_gcs(project_id, landing_bucket, f"{tag_folder}/")
         for tag_file in gcs_list:
             if tag_file.endswith(".csv"):
@@ -218,37 +246,32 @@ def read_and_attach_tag():
                 tag_info_list = read_tag_csv(f"{temp_folder}{tag_file.split('/')[-1]}")
                 for tag_info in tag_info_list:
 
-                    # use default template if template id is not provided
-                    if 'template_id' in tag_info.keys() and tag_info['template_id'] != "":
-                        template = tag_info['template_id']
-                    else:
-                        # check dataset level tag
-                        if "dataset_name" in tag_info.keys() and tag_info["dataset_name"] != "":
-                            template = default_ds_tmpl
-                        # check table level tag
-                        if "table_name" in tag_info.keys() and tag_info["table_name"] != "":
-                            template = default_tbl_tmpl
-                        # check column level tag
-                        if "column_name" in tag_info.keys() and tag_info["column_name"] != "":
-                            template = default_col_tmpl
+                    # call function to tag each row
+                    result = attach_tag_info(project_id, tag_info)
 
-                    # use default template location if template location is not provided
-                    if 'template_location' in tag_info.keys() and tag_info['template_location'] != "":
-                        tmplt_loc = tag_info['template_location']
-                    else:
-                        if "dataset_name" in tag_info.keys() and tag_info["dataset_name"] != "":
-                            tmplt_loc = default_ds_tmpl_loc
-                        # check table level tag
-                        if "table_name" in tag_info.keys() and tag_info["table_name"] != "":
-                            tmplt_loc = default_tbl_tmpl_loc
-                        # check column level tag or not
-                        if "column_name" in tag_info.keys() and tag_info["column_name"] != "":
-                            tmplt_loc = default_col_tmpl_loc
+                    # write error records to file
+                    if result == False:
+                        err_rn = tag_file.replace("error_", "").split('/')[-1]
+                        file_exist = os.path.exists(f"{temp_folder}error/error_{err_rn}")
+                        if not file_exist:
+                            os.makedirs(f"{temp_folder}error/")
 
-                    # attach tags
-                    attach_tag(project_id, template, tmplt_loc, tag_info)
+                        with open(f"{temp_folder}error/error_{err_rn}", 'a') as error_file:
+                            writer = csv.DictWriter(error_file, tag_info.keys())
+                            if file_exist:
+                                writer.writerow(tag_info)
+                            else:
+                                writer.writeheader()
+                                writer.writerow(tag_info)
                     print("-"*50)
-                    
+                
+                # upload error file to gcs
+                if os.path.exists(f"{temp_folder}error/error_{err_rn}"):    
+                    upload_file_to_gcs(project_id, archive_bucket, f"{temp_folder}error/error_{err_rn}", f"tags/error/error_{err_rn}")
+                    os.remove(f"{temp_folder}error/error_{err_rn}")
+                    os.removedirs(f"{temp_folder}error/")
+                    print("-"*50)
+                
                 os.remove(f"{temp_folder}{tag_file.split('/')[-1]}")
                 move_file_gcs(project_id, landing_bucket, tag_file, archive_bucket, f"{tag_folder}/{tag_file.split('/')[-1]}.done")
 

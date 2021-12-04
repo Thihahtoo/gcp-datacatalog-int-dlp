@@ -62,12 +62,13 @@ def get_template_info(project_id, template_id, location):
     result = []
     tmpl_field = str(tmpl).split('fields ')[1:]
     for field in tmpl_field:
-        tmpl_info = {"project_id":"", "template_id":"", "template_loc":"", 
+        tmpl_info = {"project_id":"", "template_id":"", "template_display_name":"", "template_loc":"", 
                     "field_id":"", "field_display_name":"", "field_type":"", "field_allowed_values":"",
                     "requried_field":False, "field_description":""}
         tmpl_info["project_id"] = project_id
         tmpl_info["template_id"] = template_id
         tmpl_info["template_loc"] = location
+        tmpl_info["template_display_name"] = tmpl.display_name
         tmpl_info["field_id"] = field.split('\n')[1].split(':')[1].strip().replace('"','')
         tmpl_info["field_display_name"] = (field.split('display_name:')[1].split('\n')[0].strip().replace('"','') 
                                             if "display_name" in field else "")
@@ -86,6 +87,7 @@ def get_template_info(project_id, template_id, location):
         if "is_required" in field:
             tmpl_info["requried_field"] = True
         result.append(tmpl_info)
+        
     return result
 
 def check_template_exist(project_id, template_id, location):
