@@ -6,7 +6,7 @@ def upload_file_to_gcs(project_id, bucket_name, filename, destination):
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(destination)
     blob.upload_from_filename(filename)
-    print(f"File loaded: gs://{bucket_name}{destination}")
+    print(f"File loaded: gs://{bucket_name}/{destination}")
 
 def list_file_gcs(project_id, bucketname, prefix):
     storage_client = storage.Client(project=project_id)

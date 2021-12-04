@@ -24,13 +24,14 @@ def dict_to_json(dict_obj ,filename):
     return True
 
 def prepare_dict(dict_obj):
-    for key, value in list(dict_obj.items()):
+    result_obj = dict_obj.copy()
+    for key, value in list(result_obj.items()):
         if value.lower() == "true":
-            dict_obj[key] = True
+            result_obj[key] = True
         if value.lower() == "false":
-            dict_obj[key] = False
+            result_obj[key] = False
         if re.fullmatch('[0-9]+',value):
-            dict_obj[key] = int(value)
+            result_obj[key] = int(value)
         if value == '':
-            dict_obj.pop(key)
-    return dict_obj
+            result_obj.pop(key)
+    return result_obj

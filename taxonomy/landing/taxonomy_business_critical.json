@@ -1,6 +1,6 @@
 {
     "taxonomy_display_name": "Business Critical",
-    "location": "eu",
+    "location": "europe-west2",
     "description": "Data Sensitivity ranking for business data",
     "policy_tags": [
         {
