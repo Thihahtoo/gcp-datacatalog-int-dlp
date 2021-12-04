@@ -13,7 +13,7 @@ def extract_all_template_info_to_file(project_id, file_path):
     print(f"Extracting template info to file : {csv_name}")
     with open(csv_name, 'w') as csv_file:
         # write csv header
-        writer = csv.DictWriter(csv_file, ["project_id", "template_id", "template_loc", 
+        writer = csv.DictWriter(csv_file, ["project_id", "template_id", "template_display_name", "template_loc", 
                 "field_id", "field_display_name", "field_type", "field_allowed_values",
                 "requried_field", "field_description", "extract_timestamp"])
         writer.writeheader()

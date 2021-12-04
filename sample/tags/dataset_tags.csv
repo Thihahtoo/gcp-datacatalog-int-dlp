@@ -1,3 +1,4 @@
 ﻿project_name,dataset_name,source_system,business_glossary,transformation_logic,subject_domain,layer,granularity,contains_pii,pii_type,contains_sensitive,sensitive_type,classification,hold_profiled_data,data_sign_off,retention,crop_number,frequency,data owner,data stewart,consumer_group,template_id,template_location,extra_info
 acn-uki-ds-data-ai-project,data_catalog_dev,public_data,,,,,,FALSE,,FALSE,,,,,,0,0,,,,,,extra
+acn-uki-ds-data-ai-project,data_catalog_dev_gg,public_data,,,,,,TRUE,EMAIL_ADDRESS,TRUE,US_SOCIAL_SECURITY_NUMBER,,,,,0,0,,,,template_dataset_v_1,europe-west2,extra
 acn-uki-ds-data-ai-project,data_catalog_dev,public_data,,,,,,TRUE,EMAIL_ADDRESS,TRUE,US_SOCIAL_SECURITY_NUMBER,,,,,0,0,,,,template_dataset_v_1,europe-west2,extra

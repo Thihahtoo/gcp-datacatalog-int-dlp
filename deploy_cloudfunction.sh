@@ -20,6 +20,7 @@ gcloud functions deploy $FUNCTION_NAME_1 \
 --region $LOCATION \
 --trigger-resource $TRIGGER_BUCKET \
 --trigger-event google.storage.object.finalize
+--retry
 
 gcloud functions deploy $FUNCTION_NAME_2 \
 --entry-point extract_datacatalog_data \
