@@ -19,7 +19,7 @@ gcloud functions deploy $FUNCTION_NAME_1 \
 --runtime python37 \
 --region $LOCATION \
 --trigger-resource $TRIGGER_BUCKET \
---trigger-event google.storage.object.finalize
+--trigger-event google.storage.object.finalize \
 --retry
 
 gcloud functions deploy $FUNCTION_NAME_2 \
