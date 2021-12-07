@@ -32,10 +32,9 @@
     "default_column_template": "template_column_v_0",
     "default_column_template_location": "europe-west2",
 
-    "auto_attach_policy_tag": true,
     "taxonomy_landing_bucket": "uki_ds_data_catalog",
     "taxonomy_archive_bucket": "uki_ds_data_catalog_archived",
     "taxonomy_folder": "taxonomies",
     "default_taxonomy": "Business Critical",
-    "default_taxonomy_location": "europe-west2"
+    "default_taxonomy_location": "eu"
 }

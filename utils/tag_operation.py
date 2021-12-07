@@ -3,6 +3,7 @@ from utils.gcs_operation import list_file_gcs, download_file_gcs, move_file_gcs,
 from utils.tmpl_operation import get_template, get_latest_template_id
 import os, csv
 from google.cloud import datacatalog
+from utils.policy_tag_operation import auto_attach_policy_tag
 
 def get_entry(project, dataset, table):
     # retrieve a project.dataset.table entry
@@ -130,7 +131,8 @@ def attach_tag(project, template, template_location, tag_info):
             try:
                 tag = datacatalog_client.create_tag(parent=entry, tag=tag)
                 print(f"Attached Tag: {project}.{dataset}.{table} >> {tag.column}")
-                return True
+                result = auto_attach_policy_tag(tag_info)    # for policy tagging
+                return result
             except Exception:
                 print(f"Column Not Found: {project}.{dataset}.{table} >> {tag.column}")
                 return False
@@ -139,7 +141,8 @@ def attach_tag(project, template, template_location, tag_info):
             remove_tag(entry, project, template, template_location)
             tag = datacatalog_client.create_tag(parent=entry, tag=tag)
             print(f"Attached Tag: {project}.{dataset}.{table}")
-            return True
+            result = auto_attach_policy_tag(tag_info)    # for policy tagging
+            return result
     else:
         print(f"Not Found: {project}.{dataset}.{table}")
         return False

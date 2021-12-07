@@ -1,27 +1,15 @@
 {
     "taxonomy_display_name": "Business Critical",
-    "location": "europe-west2",
+    "location": "eu",
     "description": "Data Sensitivity ranking for business data",
     "policy_tags": [
         {
             "display_name": "PII Data",
-            "description": "High sensitivity",
-            "sub_tag": [
-                {
-                    "display_name": "SSN",
-                    "description": "Social security number"
-                }
-            ]
+            "description": "High sensitivity"
         },
         {
             "display_name": "Sensitive Data",
-            "description": "Medium sensitivity",
-            "sub_tag": [
-                {
-                    "display_name": "Address",
-                    "description": "Private Address"
-                }
-            ]
+            "description": "Medium sensitivity"
         }
     ]
 }
