@@ -1,3 +1,0 @@
-project_name,dataset_name,table_name,column_name,has_pii,pii_type,template_id,template_location,extra_info
-acn-uki-ds-data-ai-project,data_catalog_dev,covid_worldwide_new,email_g,TRUE,EMAIL_ADDRESS,,,gg
-acn-uki-ds-data-ai-project,data_catalog_dev,covid_worldwide_new,email_g,TRUE,EMAIL_ADDRESS,,,gg
