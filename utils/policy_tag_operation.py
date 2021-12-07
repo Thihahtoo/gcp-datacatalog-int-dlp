@@ -1,5 +1,7 @@
 from google.cloud import bigquery
 from google.cloud import datacatalog
+from utils.utils import read_json
+import utils.taxonomy_operation as taxo_opr
 
 def create_policy_tag(display_name, description, taxonomy, parent_policy_tag = ""):
     client = datacatalog.PolicyTagManagerClient()
@@ -69,11 +71,48 @@ def attach_policy_tag(project_id, dataset_name, table_name, column_list, policy_
     table.schema = new_schema
     table = client.update_table(table, ["schema"])
     print(f"Policy Tag added to {table_id} :")
-    print(f"columns = {attached_columns}")
     print(f"policy_tag = {policy_tag}")
-    print("-"*50)
+    print(f"columns = {attached_columns}\n")
 
+def auto_attach_policy_tag(tag_info):
 
-# attach_policy_tag("acn-uki-ds-data-ai-project", "data_catalog_dev", "covid_worldwide", ["year", "deaths"], 905746461448123128, "eu", 6661519892503741752)
+    job_config = read_json("config/config.json")
+    project_id = job_config["project_id"]
+    default_taxonomy = job_config["default_taxonomy"]
+    default_taxonomy_loc = job_config["default_taxonomy_location"]
+    taxonomy_info = {
+        "taxonomy_display_name": default_taxonomy,
+        "location": default_taxonomy_loc,
+        "description": "Data Sensitivity ranking for business data",
+        "policy_tags": [
+            {
+                "display_name": "PII Data",
+                "description": "High sensitivity"
+            },
+            {
+                "display_name": "Sensitive Data",
+                "description": "Medium sensitivity"
+            }
+        ]
+    }
 
-# print(list_policy_tags("projects/acn-uki-ds-data-ai-project/locations/eu/taxonomies/4939288784302392788"))
+    if "auto_policy_tag" in tag_info.keys() and tag_info["auto_policy_tag"]:
+        print("\nAuto policy tag is enabled.")
+        taxo_opr.create_taxonomy(project_id, taxonomy_info)     #create default taxonomy
+        taxonomy = taxo_opr.get_taxonomies(project_id, default_taxonomy_loc, default_taxonomy)
+        if ("dataset_name" in tag_info.keys() and tag_info["dataset_name"] != "" 
+            and "table_name" in tag_info.keys() and tag_info["table_name"] != ""):
+
+            if "pii_columns" in tag_info.keys() and tag_info["pii_columns"] != "":
+                policy_tag = get_policy_tag(taxonomy, "PII Data")
+                attach_policy_tag(project_id, tag_info["dataset_name"], tag_info["table_name"], tag_info["pii_columns"].split(';'), policy_tag)
+        
+            if "sensitive_columns" in tag_info.keys() and tag_info["sensitive_columns"] != "":
+                policy_tag = get_policy_tag(taxonomy, "Sensitive Data")
+                attach_policy_tag(project_id, tag_info["dataset_name"], tag_info["table_name"], tag_info["sensitive_columns"].split(';'), policy_tag)
+            return True
+
+        else:
+            print("'dataset_name' and 'table_name' are required for policy tagging")
+            return False
+    return True
