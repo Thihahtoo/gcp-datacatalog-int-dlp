@@ -1,7 +1,7 @@
 {
-    "template_id": "template_column_v_2",
+    "template_id": "template_column",
     "location": "europe-west2",
-    "display_name": "Tag Template for Column Level v2",
+    "display_name": "Tag Template for Column Level",
     "fields": [
         {
             "id": "has_pii",

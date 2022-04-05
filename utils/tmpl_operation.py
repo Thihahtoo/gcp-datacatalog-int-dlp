@@ -139,6 +139,35 @@ def get_latest_template_id(project_id, template_prefix, location):
     else:
         return ""
 
+def get_all_latest_template_id(project_id, template_prefix, location):
+    datacatalog_client = datacatalog.DataCatalogClient()
+    scope = datacatalog.SearchCatalogRequest.Scope()
+    scope.include_project_ids.append(project_id)
+    results = datacatalog_client.search_catalog(scope=scope, query=f'type=tag_template location={location} name:{template_prefix}')
+    fetched_results = [result.relative_resource_name for result in results]
+
+    # get all template id prefixes
+    tmpl_set = []
+    for tmpl in fetched_results:
+        tmpl_prefix = (tmpl.split("/")[-1]).split("_")
+        tmpl_prefix = "_".join(tmpl_prefix[:-2])
+        tmpl_set.append(tmpl_prefix)
+    tmpl_set = set(tmpl_set)
+
+    # get latest version for each template
+    tmpl_list = []
+    for tmpl_prefix in tmpl_set:
+        tmpl_list.append(get_latest_template_id(project_id, tmpl_prefix, location))
+    return tmpl_list
+
+def generate_template_version(project_id, template_id, location):
+    latest_tmpl_id = get_latest_template_id(project_id, template_id, location)
+    if latest_tmpl_id:
+        tmpl_num = int(latest_tmpl_id.split("_")[-1])
+        return f"{template_id}_v_{tmpl_num + 1}"
+    else:
+        return template_id + "_v_0"
+
 def create_tag_template_from_file():
     job_config = read_json("config/config.json")
 
@@ -151,9 +180,13 @@ def create_tag_template_from_file():
         for tmpl_file in os.listdir("tag_template/landing/"):
             if tmpl_file.startswith("template") and tmpl_file.endswith(".json"):
                 tmpl_cfg = read_json(f"tag_template/landing/{tmpl_file}")
+
+                # get template version
+                tmpl_id = generate_template_version(project_id, tmpl_cfg["template_id"], tmpl_cfg["location"])
+                
                 # delete template when existed
-                delete_template(project_id, tmpl_cfg["template_id"], tmpl_cfg["location"])
-                result = create_template(project_id, tmpl_cfg["template_id"], tmpl_cfg["location"], tmpl_cfg["display_name"], tmpl_cfg["fields"])
+                delete_template(project_id, tmpl_id, tmpl_cfg["location"])
+                result = create_template(project_id, tmpl_id, tmpl_cfg["location"], tmpl_cfg["display_name"], tmpl_cfg["fields"])
                 if result:
                     os.rename(f"tag_template/landing/{tmpl_file}", f"tag_template/processed/{tmpl_file}.done")
     else:
@@ -161,9 +194,13 @@ def create_tag_template_from_file():
         for tmpl_file in gcs_list:
             if tmpl_file.endswith(".json"):
                 tmpl_cfg = read_json_gcs(project_id, landing_bucket, tmpl_file)
+
+                # get template version
+                tmpl_id = generate_template_version(project_id, tmpl_cfg["template_id"], tmpl_cfg["location"])
+
                 # delete template when existed
-                delete_template(project_id, tmpl_cfg["template_id"], tmpl_cfg["location"])
-                result = create_template(project_id, tmpl_cfg["template_id"], tmpl_cfg["location"], tmpl_cfg["display_name"], tmpl_cfg["fields"])
+                delete_template(project_id, tmpl_id, tmpl_cfg["location"])
+                result = create_template(project_id, tmpl_id, tmpl_cfg["location"], tmpl_cfg["display_name"], tmpl_cfg["fields"])
                 if result:
                     move_file_gcs(project_id, landing_bucket, tmpl_file, archive_bucket, f"{template_folder}/{tmpl_file.split('/')[-1]}.done")
     return True

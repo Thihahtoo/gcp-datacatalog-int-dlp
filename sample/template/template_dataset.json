@@ -1,8 +1,8 @@
 {
-    "template_id": "template_table_v_3",
+    "template_id": "template_dataset",
     "location": "europe-west2",
-    "display_name": "Data Catalog Table Template V 3",
-    "description": "Test template for data catalog v 3",
+    "display_name": "Data Catalog Dataset Template",
+    "description": "Test template for data catalog",
     "fields": [
         {
             "id": "project_name",
@@ -19,20 +19,6 @@
             "description": "Dataset name of the table"
         },
         {
-            "id": "table_name",
-            "display_name": "table_name",
-            "type": "string",
-            "required": true,
-            "description": "Name of the table"
-        },
-        {
-            "id": "table_description",
-            "display_name": "table_description",
-            "type": "string",
-            "required": false,
-            "description": "Description of the table"
-        },
-        {
             "id": "source_system",
             "display_name": "source_system",
             "type": "string",
@@ -45,13 +31,6 @@
             "type": "string",
             "required": false,
             "description": "The business processes where the table is used"
-        },
-        {
-            "id": "transformation_logic",
-            "display_name": "transformation_logic",
-            "type": "string",
-            "required": false,
-            "description": "Specify the breif transformation logic in simple terms"
         },
         {
             "id": "subject_domain",

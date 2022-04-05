@@ -4,6 +4,7 @@ FUNCTION_NAME_1="data_catalog_create_templates_and_tags"
 FUNCTION_NAME_2="data_catalog_extract_data"
 LOCATION="europe-west2"
 TRIGGER_BUCKET="uki_ds_data_catalog"
+SERVICE_ACCOUNT="309116795114-compute@developer.gserviceaccount.com"
 
 sudo apt install zip
 sudo yum install zip
@@ -19,7 +20,8 @@ gcloud functions deploy $FUNCTION_NAME_1 \
 --runtime python37 \
 --region $LOCATION \
 --trigger-resource $TRIGGER_BUCKET \
---trigger-event google.storage.object.finalize
+--service-account $SERVICE_ACCOUNT \
+--trigger-event google.storage.object.finalize \
 --retry
 
 gcloud functions deploy $FUNCTION_NAME_2 \
@@ -27,6 +29,7 @@ gcloud functions deploy $FUNCTION_NAME_2 \
 --runtime python37 \
 --region $LOCATION \
 --trigger-http \
+--service-account $SERVICE_ACCOUNT \
 --allow-unauthenticated
 
 rm -rf ../temp/
