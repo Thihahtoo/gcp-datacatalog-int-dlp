@@ -1,6 +1,6 @@
 {
     "project_id": "acn-uki-ds-data-ai-project",
-    "run_local": true,
+    "run_local": false,
 
     "extract_bucket": "uki_ds_data_catalog_extract",
     "extract_folder": "catalog_extract",

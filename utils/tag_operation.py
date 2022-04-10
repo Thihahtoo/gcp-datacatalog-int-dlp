@@ -186,6 +186,7 @@ def read_and_attach_tag():
             return True
         return False
 
+    err_rn = ""
     if job_config["run_local"]:
 
         for tag_file in os.listdir("tags/landing/"):

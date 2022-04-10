@@ -10,5 +10,5 @@ def create_template_and_tag(request1, request2):
 def extract_datacatalog_data(request1):
     extract_datacatalog()
 
-create_template_and_tag("request1", "request2")
-extract_datacatalog_data("request1")
+# create_template_and_tag("request1", "request2")
+# extract_datacatalog_data("request1")
