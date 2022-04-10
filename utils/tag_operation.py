@@ -1,6 +1,6 @@
 from utils.utils import read_json, read_tag_csv, prepare_dict
 from utils.gcs_operation import list_file_gcs, download_file_gcs, move_file_gcs, upload_file_to_gcs
-from utils.tmpl_operation import get_template, get_latest_template_id
+from utils.tmpl_operation import get_template, get_latest_template_id, get_all_latest_template_id
 import os, csv
 from google.cloud import datacatalog
 from utils.policy_tag_operation import auto_attach_policy_tag
@@ -93,17 +93,21 @@ def attach_tag(project, template, template_location, tag_info):
 
     tag.template = tmpl.name
     
-    # prepare dictionary for correct data types
+    # prepare dictionary to correct data types
     result_tag_info = prepare_dict(tag_info)
     dataset = result_tag_info["dataset_name"] if "dataset_name" in result_tag_info.keys() and result_tag_info["dataset_name"] != "" else ""
     table = result_tag_info["table_name"] if "table_name" in result_tag_info.keys() and result_tag_info["table_name"] != "" else ""
     
+    # flag for every fields not match with template
+    no_fields_match = True
+
     # get fields from template to filter fields which are only availabe in template
     tmpl_field = [field for field in tmpl.fields]
 
     for key, value in result_tag_info.items():
 
         if key in tmpl_field:
+            no_fields_match = False
             tag.fields[key] = datacatalog.TagField()
 
             # get the field type from template according to field
@@ -120,6 +124,10 @@ def attach_tag(project, template, template_location, tag_info):
             if field_type.enum_type:
                 tag.fields[key].enum_value.display_name = value
 
+    if no_fields_match:
+        print("Matched fields no found in template. Skipped.")
+        return False
+
     # get table entry and remove tag if existed.
     entry = get_entry(project, dataset, table)
     if entry:
@@ -131,8 +139,8 @@ def attach_tag(project, template, template_location, tag_info):
             try:
                 tag = datacatalog_client.create_tag(parent=entry, tag=tag)
                 print(f"Attached Tag: {project}.{dataset}.{table} >> {tag.column}")
-                result = auto_attach_policy_tag(tag_info)    # for policy tagging
-                return result
+                result = auto_attach_policy_tag(result_tag_info)    # for policy tagging
+                return True
             except Exception:
                 print(f"Column Not Found: {project}.{dataset}.{table} >> {tag.column}")
                 return False
@@ -141,8 +149,8 @@ def attach_tag(project, template, template_location, tag_info):
             remove_tag(entry, project, template, template_location)
             tag = datacatalog_client.create_tag(parent=entry, tag=tag)
             print(f"Attached Tag: {project}.{dataset}.{table}")
-            result = auto_attach_policy_tag(tag_info)    # for policy tagging
-            return result
+            result = auto_attach_policy_tag(result_tag_info)    # for policy tagging
+            return True
     else:
         print(f"Not Found: {project}.{dataset}.{table}")
         return False
@@ -155,65 +163,28 @@ def read_and_attach_tag():
     archive_bucket = job_config["tag_archive_bucket"]
     tag_folder = job_config["tag_folder"]
     temp_folder = job_config["temp_folder"]
-
-    ds_tmpl_prefix = job_config["dataset_template_prefix"]
-    default_ds_tmpl = job_config["default_dataset_template"]
-    default_ds_tmpl_loc = job_config["default_dataset_template_location"]
-
-    tbl_tmpl_prefix = job_config["table_template_prefix"]
-    default_tbl_tmpl = job_config["default_table_template"]
-    default_tbl_tmpl_loc = job_config["default_table_template_location"]
-
-    col_tmpl_prefix = job_config["column_template_prefix"]
-    default_col_tmpl = job_config["default_column_template"]
-    default_col_tmpl_loc = job_config["default_column_template_location"]
-
-    # for dataset level tagging
-    latest_ds_tmpl = get_latest_template_id(project_id, ds_tmpl_prefix, default_ds_tmpl_loc)
-    if latest_ds_tmpl != "":
-        default_ds_tmpl = latest_ds_tmpl
-
-    # for table level tagging
-    latest_tbl_tmpl = get_latest_template_id(project_id, tbl_tmpl_prefix, default_tbl_tmpl_loc)
-    if latest_tbl_tmpl != "":
-        default_tbl_tmpl = latest_tbl_tmpl
-
-    # for column level tagging
-    latest_col_tmpl = get_latest_template_id(project_id, col_tmpl_prefix, default_col_tmpl_loc)
-    if latest_col_tmpl != "":
-        default_col_tmpl = latest_col_tmpl
+    default_tmpl_loc = job_config["template_default_location"]
 
     def attach_tag_info(project_id, tag_info):
-        # use default template if template id is not provided
-        if 'template_id' in tag_info.keys() and tag_info['template_id'] != "":
-            template = tag_info['template_id']
-        else:
-            # check dataset level tag
-            if "dataset_name" in tag_info.keys() and tag_info["dataset_name"] != "":
-                template = default_ds_tmpl
-            # check table level tag
-            if "table_name" in tag_info.keys() and tag_info["table_name"] != "":
-                template = default_tbl_tmpl
-            # check column level tag
-            if "column_name" in tag_info.keys() and tag_info["column_name"] != "":
-                template = default_col_tmpl
-
         # use default template location if template location is not provided
         if 'template_location' in tag_info.keys() and tag_info['template_location'] != "":
             tmplt_loc = tag_info['template_location']
         else:
-            if "dataset_name" in tag_info.keys() and tag_info["dataset_name"] != "":
-                tmplt_loc = default_ds_tmpl_loc
-            # check table level tag
-            if "table_name" in tag_info.keys() and tag_info["table_name"] != "":
-                tmplt_loc = default_tbl_tmpl_loc
-            # check column level tag or not
-            if "column_name" in tag_info.keys() and tag_info["column_name"] != "":
-                tmplt_loc = default_col_tmpl_loc
-            
-        # attach tags
-        result = attach_tag(project_id, template, tmplt_loc, tag_info)
-        return result
+            tmplt_loc = default_tmpl_loc
+
+        # use default template if template id is not provided
+        if 'template_id' in tag_info.keys() and tag_info['template_id'] != "":
+            template = tag_info['template_id']
+            # attach tags
+            result = attach_tag(project_id, template, tmplt_loc, tag_info)
+            return True
+        else:
+            latest_tmpl_list = get_all_latest_template_id(project_id, "template_", tmplt_loc)
+            for tmpl in latest_tmpl_list:
+                # attach tags
+                result = attach_tag(project_id, tmpl, tmplt_loc, tag_info)
+            return True
+        return False
 
     if job_config["run_local"]:
 
