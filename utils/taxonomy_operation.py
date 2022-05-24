@@ -110,6 +110,7 @@ def create_taxonomy_from_file():
                 result = create_taxonomy(project_id, taxonomy_info)
                 if result:
                     os.rename(f"taxonomy/landing/{taxo_file}", f"taxonomy/processed/{taxo_file}.done")
+
     else:
         gcs_list = list_file_gcs(project_id, landing_bucket, f"{taxonomy_folder}/taxonomy")
         for taxo_file in gcs_list:

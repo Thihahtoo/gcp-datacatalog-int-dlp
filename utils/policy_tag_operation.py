@@ -1,7 +1,10 @@
 from google.cloud import bigquery
 from google.cloud import datacatalog
-from utils.utils import read_json
+from utils.utils import read_json, read_tag_csv
 import utils.taxonomy_operation as taxo_opr
+import os, csv
+from utils.gcs_operation import list_file_gcs, download_file_gcs, move_file_gcs, upload_file_to_gcs
+
 
 def create_policy_tag(display_name, description, taxonomy, parent_policy_tag = ""):
     client = datacatalog.PolicyTagManagerClient()
@@ -73,6 +76,87 @@ def attach_policy_tag(project_id, dataset_name, table_name, column_list, policy_
     print(f"Policy Tag added to {table_id} :")
     print(f"policy_tag = {policy_tag}")
     print(f"columns = {attached_columns}\n")
+    return True
+
+def read_and_attach_policy_tag():
+    job_config = read_json("config/config.json")
+
+    project_id = job_config["project_id"]
+    landing_bucket = job_config["policy_tag_landing_bucket"]
+    archive_bucket = job_config["policy_tag_archive_bucket"]
+    policy_tag_folder = job_config["policy_tag_folder"]
+    temp_folder = job_config["temp_folder"]
+
+    err_rn = ""
+    if job_config["run_local"]:
+
+        for policy_tag_file in os.listdir("policy_tags/landing/"):
+            if policy_tag_file.endswith(".csv"):
+                policy_tag_info_list = read_tag_csv(f"policy_tags/landing/{policy_tag_file}")
+                for policy_tag_info in policy_tag_info_list:
+
+                    # call function to tag each row
+                    taxonomy = taxo_opr.get_taxonomies(project_id, policy_tag_info["taxonomy_location"], policy_tag_info["taxonomy"])
+                    policy_tag = get_policy_tag(taxonomy, policy_tag_info["policy_tag"])
+                    result = attach_policy_tag(project_id, policy_tag_info["dataset_name"], policy_tag_info["table_name"],
+                                                policy_tag_info["column_names"].split(';'), policy_tag)
+
+                    # write error records to file
+                    if result == False:
+                        err_rn = policy_tag_file.replace("error_", "")
+                        file_exist = os.path.exists(f"policy_tags/error/error_{err_rn}")
+                        with open(f"tags/error/error_{err_rn}", 'a') as error_file:
+                            writer = csv.DictWriter(error_file, policy_tag_info.keys())
+                            if file_exist:
+                                writer.writerow(policy_tag_info)
+                            else:
+                                writer.writeheader()
+                                writer.writerow(policy_tag_info)
+                    print("-"*50)
+                
+                os.rename(f"policy_tags/landing/{policy_tag_file}", f"policy_tags/processed/{policy_tag_file}.done")
+
+    else:
+        gcs_list = list_file_gcs(project_id, landing_bucket, f"{policy_tag_folder}/")
+        for policy_tag_file in gcs_list:
+            if policy_tag_file.endswith(".csv"):
+                download_file_gcs(project_id, landing_bucket, policy_tag_file, f"{temp_folder}{policy_tag_file.split('/')[-1]}")
+                policy_tag_info_list = read_tag_csv(f"{temp_folder}{policy_tag_file.split('/')[-1]}")
+                for policy_tag_info in policy_tag_info_list:
+
+                    # call function to tag each row
+                    taxonomy = taxo_opr.get_taxonomies(project_id, policy_tag_info["taxonomy_location"], policy_tag_info["taxonomy"])
+                    policy_tag = get_policy_tag(taxonomy, policy_tag_info["policy_tag"])
+                    result = attach_policy_tag(project_id, policy_tag_info["dataset_name"], policy_tag_info["table_name"],
+                                                policy_tag_info["column_names"].split(';'), policy_tag)
+
+                    # write error records to file
+                    if result == False:
+                        err_rn = policy_tag_file.replace("error_", "").split('/')[-1]
+                        file_exist = os.path.exists(f"{temp_folder}error/error_{err_rn}")
+                        if not file_exist:
+                            os.makedirs(f"{temp_folder}error/")
+
+                        with open(f"{temp_folder}error/error_{err_rn}", 'a') as error_file:
+                            writer = csv.DictWriter(error_file, policy_tag_info.keys())
+                            if file_exist:
+                                writer.writerow(policy_tag_info)
+                            else:
+                                writer.writeheader()
+                                writer.writerow(policy_tag_info)
+                    print("-"*50)
+                
+                # upload error file to gcs
+                if os.path.exists(f"{temp_folder}error/error_{err_rn}"):    
+                    upload_file_to_gcs(project_id, archive_bucket, f"{temp_folder}error/error_{err_rn}", f"tags/error/error_{err_rn}")
+                    os.remove(f"{temp_folder}error/error_{err_rn}")
+                    os.removedirs(f"{temp_folder}error/")
+                    print("-"*50)
+                
+                os.remove(f"{temp_folder}{policy_tag_file.split('/')[-1]}")
+                move_file_gcs(project_id, landing_bucket, policy_tag_file, archive_bucket, f"{policy_tag_folder}/{policy_tag_file.split('/')[-1]}.done")
+
+
 
 def auto_attach_policy_tag(tag_info):
 
