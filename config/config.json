@@ -32,6 +32,11 @@
     "taxonomy_landing_bucket": "temp_uki_ds_data_catalog",
     "taxonomy_archive_bucket": "temp_uki_ds_data_catalog_archived",
     "taxonomy_folder": "taxonomies",
+
+    "policy_tag_landing_bucket": "uki_ds_data_catalog",
+    "policy_tag_archive_bucket": "uki_ds_data_catalog_archived",
+    "policy_tag_folder": "policy_tags",
+
     "default_taxonomy": "Business Critical",
     "default_taxonomy_location": "eu"
 }
