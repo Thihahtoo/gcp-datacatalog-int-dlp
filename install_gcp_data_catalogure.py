@@ -125,7 +125,7 @@ print("Created BQ table {}.{}.{}".format(table.project, table.dataset_id, table.
 ### Create BQ views for reporting
 sql_bq_procedure = """CREATE OR REPLACE PROCEDURE `{}.{}.{}`(in_project_id STRING, in_resource_location STRING, in_extract_destination_dataset STRING, in_bq_view_data_catalog_bigquery_info STRING)
 BEGIN
-  DECLARE  db_view_sql_statement , sql_dataset STRING(4000);
+  DECLARE  db_view_sql_statement , sql_dataset STRING(5000);
   DECLARE  counter INT64;
   SET db_view_sql_statement = concat ('create or replace view  ', in_project_id , '.',in_extract_destination_dataset ,'.' , in_bq_view_data_catalog_bigquery_info , ' as ( select * except (datasetJoinkey, joinkey ) from ( ');
   SET sql_dataset =  concat ('SELECT schema_name dataset_id, catalog_name||schema_name datasetJoinkey,creation_time dataset_creation_time ,	last_modified_time dataset_last_modified_time FROM ' , in_project_id , '.', '`region-',in_resource_location , '`.INFORMATION_SCHEMA.SCHEMATA ');
