@@ -1,12 +1,17 @@
-from google.cloud import dlp_v2, bigquery
+from google.cloud import dlp_v2, bigquery, pubsub_v1
 from utils.policy_tag_operation import attach_policy_tag, get_policy_tag
 from utils.gcs_operation import list_file_gcs, read_json_gcs, move_file_gcs
-from utils.utils import read_json
 from utils.taxonomy_operation import create_taxonomy, get_taxonomies
+from utils.utils import read_json
+import threading
 
-def create_dlp_job(project_id, dataset_id, table_id, info_types, row_limit, location):
+def create_dlp_job(project_id, dataset_id, table_id, info_types, row_limit, location, topic_id, sub_id, timeout):
 
     dlp_client = dlp_v2.DlpServiceClient()
+
+    topic = pubsub_v1.PublisherClient.topic_path(project_id, topic_id)
+    subscriber = pubsub_v1.SubscriberClient()
+    subscription_path = subscriber.subscription_path(project_id, sub_id)
 
     parent = f"projects/{project_id}/locations/{location}"
 
@@ -38,13 +43,32 @@ def create_dlp_job(project_id, dataset_id, table_id, info_types, row_limit, loca
                         }
                     }
                 }
-            }
+            },
+            {"pub_sub": {"topic": topic}}
         ]
     }
     
-    dlp_client.create_dlp_job(
+    operation = dlp_client.create_dlp_job(
         parent=parent, inspect_job=inspect_job_data
     )
+
+    job_done = threading.Event()
+
+    def callback(message):
+        try:
+            if message.attributes["DlpJobName"] == operation.name:
+                message.ack()
+                job_done.set()
+            else:
+                message.drop()
+        except Exception as e:
+            print(e)
+            raise
+
+    subscriber.subscribe(subscription_path, callback=callback)
+    finished = job_done.wait(timeout=timeout)
+    if not finished:
+        print("Job timed out.")
 
     return table_id + "_DLP"
 
@@ -163,11 +187,14 @@ def run_dlp_from_config(config_json):
         location = config_json["location"]
         taxonomy_name = config_json["taxonomy_name"]
         taxonomy_location = config_json["taxonomy_location"]
+        topic_id = config_json["topic_id"]
+        sub_id = config_json["sub_id"]
+        dlp_timeout = config_json["dlp_timeout"]
 
-        dlp_table_name = create_dlp_job(project_id, dataset_id, table_name, info_types, max_rows, location)
+        dlp_table_name = create_dlp_job(project_id, dataset_id, table_name, info_types, max_rows, location, topic_id, sub_id, dlp_timeout)
         dlp_fields = read_dlp_from_bq_table(project_id, dataset_id, dlp_table_name, min_count)
         print(dlp_fields)
-        create_taxonomy_from_dlp(project_id, taxonomy_location, dlp_fields, taxonomy_name)
+        # create_taxonomy_from_dlp(project_id, taxonomy_location, dlp_fields, taxonomy_name)
         # add_tags_from_dlp(project_id, dataset_id, table_name, dlp_fields, taxonomy_name, taxonomy_location)
         return [True, dataset_id, dlp_table_name]
     except:
