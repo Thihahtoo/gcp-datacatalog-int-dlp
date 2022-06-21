@@ -1,0 +1,9 @@
+{
+    "project_id": "acn-uki-ds-data-ai-project",
+    "dataset_id": "data_catalog_dev",
+    "table_name": "personal_info_one",
+    "info_types": ["PERSON_NAME", "EMAIL_ADDRESS", "AGE", "DATE_OF_BIRTH", "PASSPORT", "PHONE_NUMBER"],
+    "min_count": 0,
+    "max_rows": 1000,
+    "location": "global"
+}

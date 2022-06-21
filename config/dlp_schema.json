@@ -1,0 +1,9 @@
+{
+    "project_id": "STRING",
+    "dataset_id": "STRING",
+    "table_name": "STRING",
+    "info_types": "STRING ARRAY",
+    "min_count": "INTEGER",
+    "max_rows": "INTEGER",
+    "location": "STRING"
+}
