@@ -1,7 +1,8 @@
 from google.cloud import dlp_v2, bigquery
-from utils.policy_tag_operation import attach_policy_tag, create_policy_tag
+from utils.policy_tag_operation import attach_policy_tag, get_policy_tag
 from utils.gcs_operation import list_file_gcs, read_json_gcs, move_file_gcs
 from utils.utils import read_json
+from utils.taxonomy_operation import create_taxonomy, get_taxonomies
 
 def create_dlp_job(project_id, dataset_id, table_id, info_types, row_limit, location):
 
@@ -45,7 +46,7 @@ def create_dlp_job(project_id, dataset_id, table_id, info_types, row_limit, loca
         parent=parent, inspect_job=inspect_job_data
     )
 
-    return ""
+    return table_id + "_DLP"
 
 def read_dlp_from_bq_table(project_id, dataset_id, table_name, min_count):
     bq_client = bigquery.Client(project=project_id)
@@ -93,8 +94,6 @@ def read_dlp_from_bq_table(project_id, dataset_id, table_name, min_count):
 def clean_up_dlp(project_id, dataset_id, table_id):
     delete_bq_table(project_id, dataset_id, table_id)
 
-    return ""
-
 def delete_dlp_job(project_id, job_id):
     dlp_client = dlp_v2.DlpServiceClient()
     name = f"projects/{project_id}/dlpJobs/{job_id}"
@@ -108,11 +107,34 @@ def delete_bq_table(project_id, dataset_id, table_id):
         table_name = f"{project_id}.{dataset_id}.{table_id}_DLP"
     client.delete_table(table_name, not_found_ok=True)
 
-def add_tags_from_dlp(project_id, dataset_id, table_id, field_and_info_dicts, location):
-    taxonomy = f"projects/{project_id}/locations/{location}"
+def add_tags_from_dlp(project_id, dataset_id, table_id, field_and_info_dicts, taxonomy, location):
+    taxonomy = get_taxonomies(project_id, location, taxonomy)
     for info_dict in field_and_info_dicts:
-        create_policy_tag(info_dict["info_types"], "DLP generated tag for {}".format(info_dict["field_name"]), taxonomy)
-        attach_policy_tag(project_id,dataset_id, table_id, column_list=[info_dict["field_name"]], policy_tag=(info_dict["info_types"]))
+        field_name = info_dict["field_name"]
+        policy_tag = get_policy_tag(taxonomy, field_name)
+        attach_policy_tag(project_id, dataset_id, table_id, column_list=[field_name], policy_tag=policy_tag)
+    return ""
+
+def create_taxonomy_from_dlp(project_id, location, dlp_fields, taxonomy_name):
+    policy_tags = generate_policy_tags(dlp_fields)
+    taxonomy_info = {
+        "taxonomy_display_name": taxonomy_name,
+        "location": location,
+        "description": "DLP generated taxonomy for business sensitivity",
+        "policy_tags": policy_tags
+    }
+    print(taxonomy_info)
+    # create_taxonomy(project_id, taxonomy_info) 
+    return ""
+
+def generate_policy_tags(dlp_fields):
+    tags = []
+    for field in dlp_fields:
+        tags.append({
+            "display_name": field['info_types'],
+            "description": f"DLP generated tag for infoType: {field['info_types'][4:]}"
+        })
+    return tags
 
 def extract_dlp_config():
     job_config = read_json("config/config.json")
@@ -124,10 +146,11 @@ def extract_dlp_config():
     for dlp_file in file_list:
         if(dlp_file[-5:] == (".json")):
             json_info = read_json_gcs(project_id, landing_bucket, dlp_file)
-            result = run_dlp_from_config(json_info)
+            [result, dataset_id, dlp_table_name] = run_dlp_from_config(json_info)
 
             if(result):
                 move_file_gcs(project_id, landing_bucket, dlp_file, archive_bucket, f"{dlp_folder}/{dlp_file.split('/')[-1]}.done")
+                # clean_up_dlp(project_id, dataset_id, dlp_table_name)
 
 def run_dlp_from_config(config_json):
     try:
@@ -138,13 +161,15 @@ def run_dlp_from_config(config_json):
         min_count = config_json["min_count"]
         max_rows = config_json["max_rows"]
         location = config_json["location"]
+        taxonomy_name = config_json["taxonomy_name"]
+        taxonomy_location = config_json["taxonomy_location"]
 
-        create_dlp_job(project_id, dataset_id, table_name, info_types, max_rows, location)
-        dlp_fields = read_dlp_from_bq_table(project_id, dataset_id, table_name + "_DLP", min_count)
+        dlp_table_name = create_dlp_job(project_id, dataset_id, table_name, info_types, max_rows, location)
+        dlp_fields = read_dlp_from_bq_table(project_id, dataset_id, dlp_table_name, min_count)
         print(dlp_fields)
-        # add_tags_from_dlp(project_id, dataset_id, table_name, dlp_fields, location)
-
-        return True
+        create_taxonomy_from_dlp(project_id, taxonomy_location, dlp_fields, taxonomy_name)
+        # add_tags_from_dlp(project_id, dataset_id, table_name, dlp_fields, taxonomy_name, taxonomy_location)
+        return [True, dataset_id, dlp_table_name]
     except:
         print("Something went wrong")
-        return False
+        return [False, "", ""]

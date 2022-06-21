@@ -5,5 +5,7 @@
     "info_types": ["PERSON_NAME", "EMAIL_ADDRESS", "AGE", "DATE_OF_BIRTH", "PASSPORT", "PHONE_NUMBER"],
     "min_count": 0,
     "max_rows": 1000,
-    "location": "global"
+    "location": "global",
+    "taxonomy_name": "DLP_generated_taxonomy",
+    "taxonomy_location": "eu"
 }
