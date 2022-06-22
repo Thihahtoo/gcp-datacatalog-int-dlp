@@ -5,6 +5,46 @@ from utils.taxonomy_operation import create_taxonomy, get_taxonomies
 from utils.utils import read_json
 import threading
 
+def create_bq_dlp_table(project_id, dataset_id, table_name):
+
+    bq_client = bigquery.Client(project=project_id)
+    table_id = f"{project_id}.{dataset_id}.{table_name}"
+
+    json_schema = read_json("config/dlp_bq_table_schema.json")
+    schema = []
+
+    for json_column in json_schema:
+        schema.append(get_field_schema(json_column))
+
+    try:
+        table = bigquery.Table(table_id, schema=schema)
+        table = bq_client.create_table(table)
+
+        print("Successfully created table: {}".format(table_id))
+    except:
+        print("Table already exists")
+    return True
+
+def get_field_schema(field):
+    name = field['name']
+    field_type = field.get('field_type', "STRING")
+    mode = field.get('mode', "NULLABLE")
+    fields = field.get("fields", [])
+
+    subschema = []
+
+    if fields:
+        for f in fields:
+            fields_res = get_field_schema(f)
+            subschema.append(fields_res)
+
+    field_schema = bigquery.SchemaField(name=name,
+        field_type = field_type,
+        mode = mode,
+        fields = subschema)
+
+    return field_schema
+
 def create_dlp_job(project_id, dataset_id, table_id, info_types, row_limit, location, topic_id, sub_id, timeout):
 
     dlp_client = dlp_v2.DlpServiceClient()
@@ -109,39 +149,24 @@ def read_dlp_from_bq_table(project_id, dataset_id, table_name, min_count):
 
     results = bq_client.query(query=query)
     rows = results.result()
+
     dlp_values = []
     for row in rows:
         info_types = "DLP-" + row.get('infoTypes')
         main_info_type = info_types.split(",",1)[0] if "," in info_types else info_types
         dlp_values.append({"field_name": row.get('field_name'), "info_types": main_info_type})
+
     print("Successfully extracted DLP results.")
     return dlp_values
 
-def clean_up_dlp(project_id, dataset_id, table_id):
-    delete_bq_table(project_id, dataset_id, table_id)
-
-def delete_dlp_job(project_id, job_id):
-    dlp_client = dlp_v2.DlpServiceClient()
-    name = f"projects/{project_id}/dlpJobs/{job_id}"
-    dlp_client.delete_dlp_job(request={"name": name})
-
-def delete_bq_table(project_id, dataset_id, table_id):
-    client = bigquery.Client(project=project_id)
-    if(table_id[-4:]==("_DLP")):
-        table_name = f"{project_id}.{dataset_id}.{table_id}"
-    else:
-        table_name = f"{project_id}.{dataset_id}.{table_id}_DLP"
-    client.delete_table(table_name, not_found_ok=True)
-    print("Deleted BQ table: {}".format(table_name))
-
-def add_tags_from_dlp(project_id, dataset_id, table_id, field_and_info_dicts, taxonomy, location):
-    taxonomy = get_taxonomies(project_id, location, taxonomy)
-    for info_dict in field_and_info_dicts:
-        column_name = info_dict["field_name"]
-        tag_name = info_dict["info_types"]
-        policy_tag = get_policy_tag(taxonomy, tag_name)
-        attach_policy_tag(project_id, dataset_id, table_id, column_list=[column_name], policy_tag=policy_tag)
-    return ""
+def generate_policy_tags(dlp_fields):
+    tags = []
+    for field in dlp_fields:
+        tags.append({
+            "display_name": field['info_types'],
+            "description": f"DLP generated tag for infoType: {field['info_types'][4:]}"
+        })
+    return tags
 
 def create_taxonomy_from_dlp(project_id, location, dlp_fields, taxonomy_name):
     policy_tags = generate_policy_tags(dlp_fields)
@@ -152,16 +177,25 @@ def create_taxonomy_from_dlp(project_id, location, dlp_fields, taxonomy_name):
         "policy_tags": policy_tags
     }
     create_taxonomy(project_id, taxonomy_info) 
-    return ""
+    return True
 
-def generate_policy_tags(dlp_fields):
-    tags = []
-    for field in dlp_fields:
-        tags.append({
-            "display_name": field['info_types'],
-            "description": f"DLP generated tag for infoType: {field['info_types'][4:]}"
-        })
-    return tags
+def add_tags_from_dlp(project_id, dataset_id, table_id, field_and_info_dicts, taxonomy, location):
+    taxonomy = get_taxonomies(project_id, location, taxonomy)
+    for info_dict in field_and_info_dicts:
+        column_name = info_dict["field_name"]
+        tag_name = info_dict["info_types"]
+        policy_tag = get_policy_tag(taxonomy, tag_name)
+        attach_policy_tag(project_id, dataset_id, table_id, column_list=[column_name], policy_tag=policy_tag)
+    return True
+
+def delete_dlp_bq_table(project_id, dataset_id, table_id):
+    client = bigquery.Client(project=project_id)
+    if(table_id[-4:]==("_DLP")):
+        table_name = f"{project_id}.{dataset_id}.{table_id}"
+    else:
+        table_name = f"{project_id}.{dataset_id}.{table_id}_DLP"
+    client.delete_table(table_name, not_found_ok=True)
+    print("Deleted BQ table: {}".format(table_name))
 
 def extract_dlp_config():
     job_config = read_json("config/config.json")
@@ -177,7 +211,7 @@ def extract_dlp_config():
 
             if(result):
                 move_file_gcs(project_id, landing_bucket, dlp_file, archive_bucket, f"{dlp_folder}/{dlp_file.split('/')[-1]}.done")
-                clean_up_dlp(project_id, dataset_id, dlp_table_name)
+                delete_dlp_bq_table(project_id, dataset_id, dlp_table_name)
 
 def run_dlp_from_config(config_json):
     try:
@@ -203,40 +237,3 @@ def run_dlp_from_config(config_json):
     except Exception as e:
         print(e)
         return [False, "", ""]
-
-def create_bq_dlp_table(project_id, dataset_id, table_name):
-
-    bq_client = bigquery.Client(project=project_id)
-    table_id = f"{project_id}.{dataset_id}.{table_name}"
-
-    json_schema = read_json("config/dlp_bq_table_schema.json")
-    schema = []
-
-    for json_column in json_schema:
-        schema.append(get_field_schema(json_column))
-
-    table = bigquery.Table(table_id, schema=schema)
-    table = bq_client.create_table(table)
-
-    print("Successfully created table: {}".format(table_id))
-    return ""
-
-def get_field_schema(field):
-    name = field['name']
-    field_type = field.get('field_type', "STRING")
-    mode = field.get('mode', "NULLABLE")
-    fields = field.get("fields", [])
-
-    subschema = []
-
-    if fields:
-        for f in fields:
-            fields_res = get_field_schema(f)
-            subschema.append(fields_res)
-
-    field_schema = bigquery.SchemaField(name=name,
-        field_type = field_type,
-        mode = mode,
-        fields = subschema)
-
-    return field_schema

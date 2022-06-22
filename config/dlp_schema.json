@@ -5,5 +5,10 @@
     "info_types": "STRING ARRAY",
     "min_count": "INTEGER",
     "max_rows": "INTEGER",
-    "location": "STRING"
+    "location": "STRING",
+    "taxonomy_name": "STRING",
+    "taxonomy_location": "STRING",
+    "topic_id": "STRING",
+    "sub_id": "STRING",
+    "dlp_timeout": "INTEGER"
 }
