@@ -58,6 +58,7 @@ def create_dlp_job(project_id, dataset_id, table_id, info_types, row_limit, loca
         try:
             if message.attributes["DlpJobName"] == operation.name:
                 message.ack()
+                print("DLP Job Completed")
                 job_done.set()
             else:
                 message.drop()
@@ -113,6 +114,7 @@ def read_dlp_from_bq_table(project_id, dataset_id, table_name, min_count):
         info_types = "DLP-" + row.get('infoTypes')
         main_info_type = info_types.split(",",1)[0] if "," in info_types else info_types
         dlp_values.append({"field_name": row.get('field_name'), "info_types": main_info_type})
+    print("Successfully extracted DLP results.")
     return dlp_values
 
 def clean_up_dlp(project_id, dataset_id, table_id):
@@ -133,9 +135,11 @@ def delete_bq_table(project_id, dataset_id, table_id):
 
 def add_tags_from_dlp(project_id, dataset_id, table_id, field_and_info_dicts, taxonomy, location):
     taxonomy = get_taxonomies(project_id, location, taxonomy)
+    print(taxonomy)
     for info_dict in field_and_info_dicts:
         field_name = info_dict["field_name"]
         policy_tag = get_policy_tag(taxonomy, field_name)
+        print(policy_tag)
         attach_policy_tag(project_id, dataset_id, table_id, column_list=[field_name], policy_tag=policy_tag)
     return ""
 
@@ -147,13 +151,13 @@ def create_taxonomy_from_dlp(project_id, location, dlp_fields, taxonomy_name):
         "description": "DLP generated taxonomy for business sensitivity",
         "policy_tags": policy_tags
     }
-    print(taxonomy_info)
-    # create_taxonomy(project_id, taxonomy_info) 
+    create_taxonomy(project_id, taxonomy_info) 
     return ""
 
 def generate_policy_tags(dlp_fields):
     tags = []
     for field in dlp_fields:
+        print(field)
         tags.append({
             "display_name": field['info_types'],
             "description": f"DLP generated tag for infoType: {field['info_types'][4:]}"
@@ -191,12 +195,30 @@ def run_dlp_from_config(config_json):
         sub_id = config_json["sub_id"]
         dlp_timeout = config_json["dlp_timeout"]
 
+        # create_bq_dlp_table(project_id,dataset_id,table_name+"_DLP")
         dlp_table_name = create_dlp_job(project_id, dataset_id, table_name, info_types, max_rows, location, topic_id, sub_id, dlp_timeout)
         dlp_fields = read_dlp_from_bq_table(project_id, dataset_id, dlp_table_name, min_count)
-        print(dlp_fields)
-        # create_taxonomy_from_dlp(project_id, taxonomy_location, dlp_fields, taxonomy_name)
-        # add_tags_from_dlp(project_id, dataset_id, table_name, dlp_fields, taxonomy_name, taxonomy_location)
+        create_taxonomy_from_dlp(project_id, taxonomy_location, dlp_fields, taxonomy_name)
+        add_tags_from_dlp(project_id, dataset_id, table_name, dlp_fields, taxonomy_name, taxonomy_location)
         return [True, dataset_id, dlp_table_name]
-    except:
-        print("Something went wrong")
+    except Exception as e:
+        print(e)
         return [False, "", ""]
+
+def create_bq_dlp_table(project_id, dataset_id, table_name):
+
+    bq_client = bigquery.Client()
+    schema_json = read_json("config/dlp_bq_table_schema.json")
+    table_id = f"{project_id}.{dataset_id}.{table_name}"
+    formatted_schema = []
+
+    for row in schema_json:
+        print(row)
+        formatted_schema.append(bigquery.SchemaField(row['name'], row['type'], row['mode']))
+        
+
+    table = bigquery.Table(table_id, schema=formatted_schema)
+    print(table)
+    table = bq_client.create_table(table)
+    print("Created table {}.{}.{}".format(table.project, table.dataset_id, table.table_id))
+    return ""
