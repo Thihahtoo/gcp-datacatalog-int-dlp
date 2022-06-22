@@ -135,12 +135,11 @@ def delete_bq_table(project_id, dataset_id, table_id):
 
 def add_tags_from_dlp(project_id, dataset_id, table_id, field_and_info_dicts, taxonomy, location):
     taxonomy = get_taxonomies(project_id, location, taxonomy)
-    print(taxonomy)
     for info_dict in field_and_info_dicts:
-        field_name = info_dict["field_name"]
-        policy_tag = get_policy_tag(taxonomy, field_name)
-        print(policy_tag)
-        attach_policy_tag(project_id, dataset_id, table_id, column_list=[field_name], policy_tag=policy_tag)
+        column_name = info_dict["field_name"]
+        tag_name = info_dict["info_types"]
+        policy_tag = get_policy_tag(taxonomy, tag_name)
+        attach_policy_tag(project_id, dataset_id, table_id, column_list=[column_name], policy_tag=policy_tag)
     return ""
 
 def create_taxonomy_from_dlp(project_id, location, dlp_fields, taxonomy_name):
@@ -157,7 +156,6 @@ def create_taxonomy_from_dlp(project_id, location, dlp_fields, taxonomy_name):
 def generate_policy_tags(dlp_fields):
     tags = []
     for field in dlp_fields:
-        print(field)
         tags.append({
             "display_name": field['info_types'],
             "description": f"DLP generated tag for infoType: {field['info_types'][4:]}"
@@ -215,7 +213,7 @@ def create_bq_dlp_table(project_id, dataset_id, table_name):
     for row in schema_json:
         print(row)
         formatted_schema.append(bigquery.SchemaField(row['name'], row['type'], row['mode']))
-        
+    print(formatted_schema)
 
     table = bigquery.Table(table_id, schema=formatted_schema)
     print(table)

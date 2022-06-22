@@ -2,6 +2,7 @@
 
 FUNCTION_NAME_1="data_catalog_create_templates_and_tags"
 FUNCTION_NAME_2="data_catalog_extract_data"
+FUNCTION_NAME_3="data_catalog_dlp_tag_generation"
 LOCATION="europe-west2"
 TRIGGER_BUCKET="uki_ds_data_catalog"
 SERVICE_ACCOUNT="309116795114-compute@developer.gserviceaccount.com"
@@ -31,5 +32,14 @@ gcloud functions deploy $FUNCTION_NAME_2 \
 --trigger-http \
 --service-account $SERVICE_ACCOUNT \
 --allow-unauthenticated
+
+gcloud functions deploy $FUNCTION_NAME_3 \
+--entry-point run_dlp_job \
+--runtime python37 \
+--region $LOCATION \
+--trigger-resource $TRIGGER_BUCKET \
+--service-account $SERVICE_ACCOUNT \
+--trigger-event google.storage.object.finalize \
+--retry
 
 rm -rf ../temp/
