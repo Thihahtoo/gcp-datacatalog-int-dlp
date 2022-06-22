@@ -228,7 +228,7 @@ def run_dlp_from_config(config_json):
         sub_id = config_json["sub_id"]
         dlp_timeout = config_json["dlp_timeout"]
 
-        create_bq_dlp_table(project_id, dataset_id, table_name+"_DLP", taxonomy_location)
+        create_bq_dlp_table(project_id, dataset_id, table_name+"_DLP")
         dlp_table_name = create_dlp_job(project_id, dataset_id, table_name, info_types, max_rows, location, topic_id, sub_id, dlp_timeout)
         dlp_fields = read_dlp_from_bq_table(project_id, dataset_id, dlp_table_name, min_count)
         create_taxonomy_from_dlp(project_id, taxonomy_location, dlp_fields, taxonomy_name)
