@@ -132,6 +132,7 @@ def delete_bq_table(project_id, dataset_id, table_id):
     else:
         table_name = f"{project_id}.{dataset_id}.{table_id}_DLP"
     client.delete_table(table_name, not_found_ok=True)
+    print("Deleted BQ table: {}".format(table_name))
 
 def add_tags_from_dlp(project_id, dataset_id, table_id, field_and_info_dicts, taxonomy, location):
     taxonomy = get_taxonomies(project_id, location, taxonomy)
@@ -176,7 +177,7 @@ def extract_dlp_config():
 
             if(result):
                 move_file_gcs(project_id, landing_bucket, dlp_file, archive_bucket, f"{dlp_folder}/{dlp_file.split('/')[-1]}.done")
-                # clean_up_dlp(project_id, dataset_id, dlp_table_name)
+                clean_up_dlp(project_id, dataset_id, dlp_table_name)
 
 def run_dlp_from_config(config_json):
     try:
@@ -193,7 +194,7 @@ def run_dlp_from_config(config_json):
         sub_id = config_json["sub_id"]
         dlp_timeout = config_json["dlp_timeout"]
 
-        # create_bq_dlp_table(project_id,dataset_id,table_name+"_DLP")
+        create_bq_dlp_table(project_id, dataset_id, table_name+"_DLP", taxonomy_location)
         dlp_table_name = create_dlp_job(project_id, dataset_id, table_name, info_types, max_rows, location, topic_id, sub_id, dlp_timeout)
         dlp_fields = read_dlp_from_bq_table(project_id, dataset_id, dlp_table_name, min_count)
         create_taxonomy_from_dlp(project_id, taxonomy_location, dlp_fields, taxonomy_name)
@@ -205,18 +206,37 @@ def run_dlp_from_config(config_json):
 
 def create_bq_dlp_table(project_id, dataset_id, table_name):
 
-    bq_client = bigquery.Client()
-    schema_json = read_json("config/dlp_bq_table_schema.json")
+    bq_client = bigquery.Client(project=project_id)
     table_id = f"{project_id}.{dataset_id}.{table_name}"
-    formatted_schema = []
 
-    for row in schema_json:
-        print(row)
-        formatted_schema.append(bigquery.SchemaField(row['name'], row['type'], row['mode']))
-    print(formatted_schema)
+    json_schema = read_json("config/dlp_bq_table_schema.json")
+    schema = []
 
-    table = bigquery.Table(table_id, schema=formatted_schema)
-    print(table)
+    for json_column in json_schema:
+        schema.append(get_field_schema(json_column))
+
+    table = bigquery.Table(table_id, schema=schema)
     table = bq_client.create_table(table)
-    print("Created table {}.{}.{}".format(table.project, table.dataset_id, table.table_id))
+
+    print("Successfully created table: {}".format(table_id))
     return ""
+
+def get_field_schema(field):
+    name = field['name']
+    field_type = field.get('field_type', "STRING")
+    mode = field.get('mode', "NULLABLE")
+    fields = field.get("fields", [])
+
+    subschema = []
+
+    if fields:
+        for f in fields:
+            fields_res = get_field_schema(f)
+            subschema.append(fields_res)
+
+    field_schema = bigquery.SchemaField(name=name,
+        field_type = field_type,
+        mode = mode,
+        fields = subschema)
+
+    return field_schema
