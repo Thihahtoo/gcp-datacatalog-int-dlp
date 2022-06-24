@@ -179,21 +179,19 @@ def create_taxonomy_from_dlp(project_id, location, dlp_fields, taxonomy_name):
     create_taxonomy(project_id, taxonomy_info) 
     return True
 
-def add_tags_from_dlp(project_id, dataset_id, table_id, field_and_info_dicts, taxonomy, location):
+def add_tags_from_dlp(project_id, dataset_id, table_list, field_and_info_dicts, taxonomy, location):
     taxonomy = get_taxonomies(project_id, location, taxonomy)
-    for info_dict in field_and_info_dicts:
-        column_name = info_dict["field_name"]
-        tag_name = info_dict["info_types"]
-        policy_tag = get_policy_tag(taxonomy, tag_name)
-        attach_policy_tag(project_id, dataset_id, table_id, column_list=[column_name], policy_tag=policy_tag)
+    for table_id in table_list:
+        for info_dict in field_and_info_dicts:
+            column_name = info_dict["field_name"]
+            tag_name = info_dict["info_types"]
+            policy_tag = get_policy_tag(taxonomy, tag_name)
+            attach_policy_tag(project_id, dataset_id, table_id, column_list=[column_name], policy_tag=policy_tag)
     return True
 
 def delete_dlp_bq_table(project_id, dataset_id, table_id):
     client = bigquery.Client(project=project_id)
-    if(table_id[-4:]==("_DLP")):
-        table_name = f"{project_id}.{dataset_id}.{table_id}"
-    else:
-        table_name = f"{project_id}.{dataset_id}.{table_id}_DLP"
+    table_name = f"{project_id}.{dataset_id}.{table_id}"
     client.delete_table(table_name, not_found_ok=True)
     print("Deleted BQ table: {}".format(table_name))
 
@@ -227,12 +225,16 @@ def run_dlp_from_config(config_json):
         topic_id = config_json["topic_id"]
         sub_id = config_json["sub_id"]
         dlp_timeout = config_json["dlp_timeout"]
+        table_list: list = config_json["table_list"]
+
+        if(table_name not in table_list):
+            table_list.append(table_name)
 
         create_bq_dlp_table(project_id, dataset_id, table_name+"_DLP")
         dlp_table_name = create_dlp_job(project_id, dataset_id, table_name, info_types, max_rows, location, topic_id, sub_id, dlp_timeout)
         dlp_fields = read_dlp_from_bq_table(project_id, dataset_id, dlp_table_name, min_count)
         create_taxonomy_from_dlp(project_id, taxonomy_location, dlp_fields, taxonomy_name)
-        add_tags_from_dlp(project_id, dataset_id, table_name, dlp_fields, taxonomy_name, taxonomy_location)
+        add_tags_from_dlp(project_id, dataset_id, table_list, dlp_fields, taxonomy_name, taxonomy_location)
         return [True, dataset_id, dlp_table_name]
     except Exception as e:
         print(e)

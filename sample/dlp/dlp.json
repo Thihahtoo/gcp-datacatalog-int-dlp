@@ -10,5 +10,6 @@
     "taxonomy_location": "eu",
     "topic_id": "data-cataloguer-dlp",
     "sub_id": "data-cataloguer-dlp-sub",
-    "dlp_timeout": 300
+    "dlp_timeout": 300,
+    "table_list": []
 }

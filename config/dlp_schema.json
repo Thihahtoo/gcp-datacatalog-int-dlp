@@ -10,5 +10,6 @@
     "taxonomy_location": "STRING",
     "topic_id": "STRING",
     "sub_id": "STRING",
-    "dlp_timeout": "INTEGER"
+    "dlp_timeout": "INTEGER",
+    "table_list": "STRING ARRAY"
 }
