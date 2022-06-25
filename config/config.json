@@ -37,6 +37,10 @@
     "policy_tag_archive_bucket": "uki_ds_data_catalog_archived",
     "policy_tag_folder": "policy_tags",
 
+    "dlp_landing_bucket": "uki_ds_dlp_test",
+    "dlp_archive_bucket": "uki_ds_dlp_test_archived",
+    "dlp_folder": "dlp",
+
     "default_taxonomy": "Business Critical",
     "default_taxonomy_location": "eu"
 }
