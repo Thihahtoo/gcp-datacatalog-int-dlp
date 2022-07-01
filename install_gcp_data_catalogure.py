@@ -100,9 +100,6 @@ print ('GCS Bucket creation completed for data extract area for reporting')
 ######### ################## ######### ######### #########
 ######### ############ Create BQ datasets and tables for reporting
 ######### ################## ######### ######### #########
-client.delete_dataset(f"{project_id}.{reporting_dataset}", delete_contents=True, not_found_ok=True)  # Make an API request.
-print("Deleted BQ dataset '{}'.".format(f"{project_id}.{reporting_dataset}"))
-
 dataset = bigquery.Dataset(f"{project_id}.{reporting_dataset}")
 dataset.location = resource_location
 dataset = client.create_dataset(dataset, timeout=30)  # Make an API request.

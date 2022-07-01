@@ -1,11 +1,13 @@
 {
+    "info for this config file" : "",
     "project_id": "acn-uki-ds-data-ai-project",
-    "run_local": false,
     "resource_location":"europe-west2",
+    "service_account":"309116795114-compute@developer.gserviceaccount.com",
+
+    "run_local": false,
     "function_data_catalogs":"temp_data_catalog_create_templates_and_tags",
     "function_data_extract":"temp_data_catalog_extract_data",
     "trigger_bucket":"temp_uki_ds_data_catalog",
-    "service_account":"309116795114-compute@developer.gserviceaccount.com",
     "bq_view_data_catalog_bigquery_info": "data_catalog_bigquery_info",
     "bq_view_data_catalog_bi_tag_extract": "data_catalog_bi_tag_extract",
 
