@@ -4,6 +4,7 @@ from utils.tmpl_operation import get_template, get_latest_template_id, get_all_l
 import os, csv
 from google.cloud import datacatalog
 from utils.policy_tag_operation import auto_attach_policy_tag
+import utils.dlp_operation as dlp_opr
 
 def get_entry(project, dataset, table):
     # retrieve a project.dataset.table entry
@@ -82,7 +83,7 @@ def get_tag_info(project, dataset, table=""):
 
     return result
 
-def attach_tag(project, template, template_location, tag_info):
+def attach_tag(project, template, template_location, tag_info, flag_auto_policy_tag):
     # create a tag for a table
     datacatalog_client = datacatalog.DataCatalogClient()
     tag = datacatalog.Tag()
@@ -139,7 +140,7 @@ def attach_tag(project, template, template_location, tag_info):
             try:
                 tag = datacatalog_client.create_tag(parent=entry, tag=tag)
                 print(f"Attached Tag: {project}.{dataset}.{table} >> {tag.column}")
-                result = auto_attach_policy_tag(result_tag_info)    # for policy tagging
+                if flag_auto_policy_tag: auto_attach_policy_tag(result_tag_info)    # for policy tagging
                 return True
             except Exception:
                 print(f"Column Not Found: {project}.{dataset}.{table} >> {tag.column}")
@@ -149,7 +150,7 @@ def attach_tag(project, template, template_location, tag_info):
             remove_tag(entry, project, template, template_location)
             tag = datacatalog_client.create_tag(parent=entry, tag=tag)
             print(f"Attached Tag: {project}.{dataset}.{table}")
-            result = auto_attach_policy_tag(result_tag_info)    # for policy tagging
+            if flag_auto_policy_tag: auto_attach_policy_tag(result_tag_info)    # for policy tagging
             return True
     else:
         print(f"Not Found: {project}.{dataset}.{table}")
@@ -163,9 +164,13 @@ def read_and_attach_tag():
     archive_bucket = job_config["tag_archive_bucket"]
     tag_folder = job_config["tag_folder"]
     temp_folder = job_config["temp_folder"]
-    default_tmpl_loc = job_config["template_default_location"]
+    default_tmpl_loc = job_config["template_default_location"]          
 
     def attach_tag_info(project_id, tag_info):
+        
+        # flag to prevent multiple auto policy tagging for the same table
+        flg_auto_policy_tag = True   
+
         # use default template location if template location is not provided
         if 'template_location' in tag_info.keys() and tag_info['template_location'] != "":
             tmplt_loc = tag_info['template_location']
@@ -176,13 +181,16 @@ def read_and_attach_tag():
         if 'template_id' in tag_info.keys() and tag_info['template_id'] != "":
             template = tag_info['template_id']
             # attach tags
-            result = attach_tag(project_id, template, tmplt_loc, tag_info)
+            result = attach_tag(project_id, template, tmplt_loc, tag_info, flg_auto_policy_tag)
+            dlp_opr.delete_dlp_bq_table(project_id, tag_info["dataset_name"], tag_info["table_name"]+"_DLP")
             return True
         else:
             latest_tmpl_list = get_all_latest_template_id(project_id, "template_", tmplt_loc)
             for tmpl in latest_tmpl_list:
                 # attach tags
-                result = attach_tag(project_id, tmpl, tmplt_loc, tag_info)
+                result = attach_tag(project_id, tmpl, tmplt_loc, tag_info, flg_auto_policy_tag)
+                flg_auto_policy_tag = False
+            dlp_opr.delete_dlp_bq_table(project_id, tag_info["dataset_name"], tag_info["table_name"]+"_DLP")
             return True
         return False
 

@@ -1,9 +1,10 @@
 from google.cloud import dlp_v2, bigquery, pubsub_v1
-from utils.policy_tag_operation import attach_policy_tag, get_policy_tag
+# from utils.policy_tag_operation import attach_policy_tag, get_policy_tag
 from utils.gcs_operation import list_file_gcs, read_json_gcs, move_file_gcs
 from utils.taxonomy_operation import create_taxonomy, get_taxonomies
 from utils.utils import read_json
 import threading
+from google.cloud.exceptions import NotFound
 
 def create_bq_dlp_table(project_id, dataset_id, table_name):
 
@@ -53,6 +54,8 @@ def create_dlp_job(project_id, dataset_id, table_id, info_types, row_limit, loca
     subscriber = pubsub_v1.SubscriberClient()
     subscription_path = subscriber.subscription_path(project_id, sub_id)
 
+    bq_client = bigquery.Client(project_id)
+
     parent = f"projects/{project_id}/locations/{location}"
 
     inspect_job_data = {
@@ -87,31 +90,36 @@ def create_dlp_job(project_id, dataset_id, table_id, info_types, row_limit, loca
             {"pub_sub": {"topic": topic}}
         ]
     }
+
+    try:
+        bq_client.get_table(f"{project_id}.{dataset_id}.{table_id}_DLP")
+        operation = dlp_client.create_dlp_job(
+            parent=parent, inspect_job=inspect_job_data
+        )
+
+        job_done = threading.Event()
+
+        def callback(message):
+            try:
+                if message.attributes["DlpJobName"] == operation.name:
+                    message.ack()
+                    print("DLP Job Completed")
+                    job_done.set()
+                else:
+                    message.drop()
+            except Exception as e:
+                print(e)
+                raise
+
+        subscriber.subscribe(subscription_path, callback=callback)
+        finished = job_done.wait(timeout=timeout)
+        if not finished:
+            print("Job timed out.")
+
+        return table_id + "_DLP"
+    except NotFound:
+        print(f"{project_id}.{dataset_id}.{table_id} Not Found.")
     
-    operation = dlp_client.create_dlp_job(
-        parent=parent, inspect_job=inspect_job_data
-    )
-
-    job_done = threading.Event()
-
-    def callback(message):
-        try:
-            if message.attributes["DlpJobName"] == operation.name:
-                message.ack()
-                print("DLP Job Completed")
-                job_done.set()
-            else:
-                message.drop()
-        except Exception as e:
-            print(e)
-            raise
-
-    subscriber.subscribe(subscription_path, callback=callback)
-    finished = job_done.wait(timeout=timeout)
-    if not finished:
-        print("Job timed out.")
-
-    return table_id + "_DLP"
 
 def read_dlp_from_bq_table(project_id, dataset_id, table_name, min_count):
     bq_client = bigquery.Client(project=project_id)
@@ -146,13 +154,13 @@ def read_dlp_from_bq_table(project_id, dataset_id, table_name, min_count):
     ORDER BY
         table_counts.field_name
     """
-
+    print(query)
     results = bq_client.query(query=query)
     rows = results.result()
 
     dlp_values = []
     for row in rows:
-        info_types = "DLP-" + row.get('infoTypes')
+        info_types = row.get('infoTypes')
         main_info_type = info_types.split(",",1)[0] if "," in info_types else info_types
         dlp_values.append({"field_name": row.get('field_name'), "info_types": main_info_type})
 
@@ -179,21 +187,24 @@ def create_taxonomy_from_dlp(project_id, location, dlp_fields, taxonomy_name):
     create_taxonomy(project_id, taxonomy_info) 
     return True
 
-def add_tags_from_dlp(project_id, dataset_id, table_list, field_and_info_dicts, taxonomy, location):
-    taxonomy = get_taxonomies(project_id, location, taxonomy)
-    for table_id in table_list:
-        for info_dict in field_and_info_dicts:
-            column_name = info_dict["field_name"]
-            tag_name = info_dict["info_types"]
-            policy_tag = get_policy_tag(taxonomy, tag_name)
-            attach_policy_tag(project_id, dataset_id, table_id, column_list=[column_name], policy_tag=policy_tag)
-    return True
+# def add_tags_from_dlp(project_id, dataset_id, table_list, field_and_info_dicts, taxonomy, location):
+#     taxonomy = get_taxonomies(project_id, location, taxonomy)
+#     for table_id in table_list:
+#         for info_dict in field_and_info_dicts:
+#             column_name = info_dict["field_name"]
+#             tag_name = info_dict["info_types"]
+#             policy_tag = get_policy_tag(taxonomy, tag_name)
+#             attach_policy_tag(project_id, dataset_id, table_id, column_list=[column_name], policy_tag=policy_tag)
+#     return True
 
 def delete_dlp_bq_table(project_id, dataset_id, table_id):
     client = bigquery.Client(project=project_id)
     table_name = f"{project_id}.{dataset_id}.{table_id}"
-    client.delete_table(table_name, not_found_ok=True)
-    print("Deleted BQ table: {}".format(table_name))
+    try:
+        client.get_table(table_name)
+        client.delete_table(table_name, not_found_ok=True)
+        print("Deleted BQ table: {}".format(table_name))
+    except NotFound: pass
 
 def extract_dlp_config():
     job_config = read_json("config/config.json")
@@ -234,7 +245,7 @@ def run_dlp_from_config(config_json):
         dlp_table_name = create_dlp_job(project_id, dataset_id, table_name, info_types, max_rows, location, topic_id, sub_id, dlp_timeout)
         dlp_fields = read_dlp_from_bq_table(project_id, dataset_id, dlp_table_name, min_count)
         create_taxonomy_from_dlp(project_id, taxonomy_location, dlp_fields, taxonomy_name)
-        add_tags_from_dlp(project_id, dataset_id, table_list, dlp_fields, taxonomy_name, taxonomy_location)
+        # add_tags_from_dlp(project_id, dataset_id, table_list, dlp_fields, taxonomy_name, taxonomy_location)
         return [True, dataset_id, dlp_table_name]
     except Exception as e:
         print(e)
