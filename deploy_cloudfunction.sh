@@ -23,6 +23,7 @@ gcloud functions deploy $FUNCTION_NAME_1 \
 --trigger-resource $TRIGGER_BUCKET \
 --service-account $SERVICE_ACCOUNT \
 --trigger-event google.storage.object.finalize \
+--timeout 300 \
 --retry
 
 gcloud functions deploy $FUNCTION_NAME_2 \
@@ -31,15 +32,16 @@ gcloud functions deploy $FUNCTION_NAME_2 \
 --region $LOCATION \
 --trigger-http \
 --service-account $SERVICE_ACCOUNT \
+--timeout 300 \
 --allow-unauthenticated
 
-gcloud functions deploy $FUNCTION_NAME_3 \
---entry-point run_dlp_job \
---runtime python37 \
---region $LOCATION \
---trigger-resource $TRIGGER_BUCKET \
---service-account $SERVICE_ACCOUNT \
---trigger-event google.storage.object.finalize \
---retry
+# gcloud functions deploy $FUNCTION_NAME_3 \
+# --entry-point run_dlp_job \
+# --runtime python37 \
+# --region $LOCATION \
+# --trigger-resource $TRIGGER_BUCKET \
+# --service-account $SERVICE_ACCOUNT \
+# --trigger-event google.storage.object.finalize \
+# --retry
 
 rm -rf ../temp/

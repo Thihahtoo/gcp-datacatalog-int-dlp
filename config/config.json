@@ -17,20 +17,20 @@
     "template_extract_destination_table": "data_catalog_template_extract",
     "template_extract_table_schema": "config/template_info_schema.json",
 
-    "template_landing_bucket": "temp_uki_ds_data_catalog",
-    "template_archive_bucket": "temp_uki_ds_data_catalog_archived",
+    "template_landing_bucket": "uki_ds_data_catalog",
+    "template_archive_bucket": "uki_ds_data_catalog_archived",
     "template_folder": "templates",
 
-    "tag_landing_bucket": "temp_uki_ds_data_catalog",
-    "tag_archive_bucket": "temp_uki_ds_data_catalog_archived",
+    "tag_landing_bucket": "uki_ds_data_catalog",
+    "tag_archive_bucket": "uki_ds_data_catalog_archived",
     "tag_folder": "tags",
 
     "temp_folder": "/tmp/",
 
     "template_default_location": "europe-west2",
 
-    "taxonomy_landing_bucket": "temp_uki_ds_data_catalog",
-    "taxonomy_archive_bucket": "temp_uki_ds_data_catalog_archived",
+    "taxonomy_landing_bucket": "uki_ds_data_catalog",
+    "taxonomy_archive_bucket": "uki_ds_data_catalog_archived",
     "taxonomy_folder": "taxonomies",
 
     "policy_tag_landing_bucket": "uki_ds_data_catalog",
@@ -41,6 +41,13 @@
     "dlp_archive_bucket": "uki_ds_dlp_test_archived",
     "dlp_folder": "dlp",
 
-    "default_taxonomy": "Business Critical",
-    "default_taxonomy_location": "eu"
+    "dlp_taxonomy": "DLP Generated Taxonomy",
+    "dlp_info_types": ["PERSON_NAME", "EMAIL_ADDRESS", "AGE", "DATE_OF_BIRTH", "PASSPORT", "PHONE_NUMBER"],
+    "dlp_taxonomy_location": "eu",
+    "min_count": 0,
+    "max_rows": 1000,
+    "dlp_location": "global",
+    "topic_id": "data-cataloguer-dlp",
+    "sub_id": "data-cataloguer-dlp-sub",
+    "dlp_timeout": 300
 }

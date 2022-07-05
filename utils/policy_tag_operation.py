@@ -4,7 +4,7 @@ from utils.utils import read_json, read_tag_csv
 import utils.taxonomy_operation as taxo_opr
 import os, csv
 from utils.gcs_operation import list_file_gcs, download_file_gcs, move_file_gcs, upload_file_to_gcs
-
+import utils.dlp_operation as dlp_opr
 
 def create_policy_tag(display_name, description, taxonomy, parent_policy_tag = ""):
     client = datacatalog.PolicyTagManagerClient()
@@ -162,41 +162,54 @@ def auto_attach_policy_tag(tag_info):
 
     job_config = read_json("config/config.json")
     project_id = job_config["project_id"]
-    default_taxonomy = job_config["default_taxonomy"]
-    default_taxonomy_loc = job_config["default_taxonomy_location"]
+    dlp_taxonomy = job_config["dlp_taxonomy"]
+    dlp_taxonomy_loc = job_config["dlp_taxonomy_location"]
+
+    dlp_info_types = job_config["dlp_info_types"]
+    min_count = job_config["min_count"]
+    max_rows = job_config["max_rows"]
+    dlp_location = job_config["dlp_location"]
+    topic_id = job_config["topic_id"]
+    sub_id = job_config["sub_id"]
+    dlp_timeout = job_config["dlp_timeout"]
+
+    policy_tags = []
+    for info in dlp_info_types:
+        policy_tags.append({
+            "display_name": info,
+            "description": f"DLP generated tag for infoType: {info}"
+        })
+
     taxonomy_info = {
-        "taxonomy_display_name": default_taxonomy,
-        "location": default_taxonomy_loc,
-        "description": "Data Sensitivity ranking for business data",
-        "policy_tags": [
-            {
-                "display_name": "PII Data",
-                "description": "High sensitivity"
-            },
-            {
-                "display_name": "Sensitive Data",
-                "description": "Medium sensitivity"
-            }
-        ]
+        "taxonomy_display_name": dlp_taxonomy,
+        "location": dlp_taxonomy_loc,
+        "description": "DLP generated taxonomy for auto policy tagging for business critical data",
+        "policy_tags": policy_tags
     }
 
     if "auto_policy_tag" in tag_info.keys() and tag_info["auto_policy_tag"]:
         print("\nAuto policy tag is enabled.")
+
         taxo_opr.create_taxonomy(project_id, taxonomy_info)     #create default taxonomy
-        taxonomy = taxo_opr.get_taxonomies(project_id, default_taxonomy_loc, default_taxonomy)
-        if ("dataset_name" in tag_info.keys() and tag_info["dataset_name"] != "" 
-            and "table_name" in tag_info.keys() and tag_info["table_name"] != ""):
+        taxonomy = taxo_opr.get_taxonomies(project_id, dlp_taxonomy_loc, dlp_taxonomy)
 
-            if "pii_columns" in tag_info.keys() and tag_info["pii_columns"] != "":
-                policy_tag = get_policy_tag(taxonomy, "PII Data")
-                attach_policy_tag(project_id, tag_info["dataset_name"], tag_info["table_name"], tag_info["pii_columns"].split(';'), policy_tag)
+        # attach policy tag using dlp
+        dlp_opr.create_bq_dlp_table(project_id, tag_info["dataset_name"], tag_info["table_name"]+"_DLP")
+        dlp_table_name = dlp_opr.create_dlp_job(project_id, tag_info["dataset_name"], tag_info["table_name"], dlp_info_types,
+                                                max_rows, dlp_location, topic_id, sub_id, dlp_timeout)
+        dlp_fields = dlp_opr.read_dlp_from_bq_table(project_id, tag_info["dataset_name"], dlp_table_name, min_count)
         
-            if "sensitive_columns" in tag_info.keys() and tag_info["sensitive_columns"] != "":
-                policy_tag = get_policy_tag(taxonomy, "Sensitive Data")
-                attach_policy_tag(project_id, tag_info["dataset_name"], tag_info["table_name"], tag_info["sensitive_columns"].split(';'), policy_tag)
-            return True
+        print("DLP Generated fields:")
+        print(dlp_fields)
 
-        else:
-            print("'dataset_name' and 'table_name' are required for policy tagging")
-            return False
+        for info_dict in dlp_fields:
+            column_name = info_dict["field_name"]
+            tag_name = info_dict["info_types"]
+            policy_tag = get_policy_tag(taxonomy, tag_name)
+            attach_policy_tag(project_id, tag_info["dataset_name"], tag_info["table_name"], column_list=[column_name], policy_tag=policy_tag)
+
+        # clean up after running the job
+        # dlp_opr.delete_dlp_bq_table(project_id, tag_info["dataset_name"], dlp_table_name)
+
     return True
+
